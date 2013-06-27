@@ -12,6 +12,7 @@ LIBS = $(LOG4NET_LIBS) $(DATALIBS) $(JSONLIBS) $(DOTCMISLIBS) \
 
 SOURCES =  \
 	CmisSyncTests.cs \
+	FileSystemChangesTest.cs \
 	LocalFilesystemActivityGenerator.cs
 
 EXTRA_DIST = TestLibrary.csproj \

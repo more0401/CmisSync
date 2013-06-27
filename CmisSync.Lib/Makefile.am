@@ -23,6 +23,7 @@ SOURCES =  \
 	Sync/CmisRepo.cs \
 	Sync/CrawlStrategy.cs \
 	Sync/SynchronizedFolder.cs \
+	Sync/FileSystemChanges.cs \
 	Cmis/CmisPermissionDeniedException.cs \
 	Cmis/CmisServerNotFoundException.cs \
 	Cmis/CmisUtils.cs \
