@@ -1,36 +1,36 @@
 using System;
 using System.IO;
 using System.Collections.Generic;
+using System.Threading;
 
 using CmisSync.Lib.Sync;
 
 
 
-namespace UnitTestProject1
+namespace TestLibrary
 {
     using NUnit.Framework;
 
     [TestFixture]
-    public class UnitTest1
+    public class SyncWatcherTest
     {
-        private static string testFolderParent = "e:\\";
-        private static string testFolder = "e:\\test";
-        private static int normalNumber = 10;
-        private static int heavyNumber = 10000;
-        private static int fileInFolderNumber = 1000;
+        private static readonly string TestFolderParent = Directory.GetCurrentDirectory();
+        private static readonly string TestFolder = Path.Combine(TestFolderParent, "test");
+        private static readonly int NormalNumber = 10;
+        private static readonly int HeavyNumber = 10000;
+        private static readonly int FileInFolderNumber = 1000;
 
-        private static Object testLock = new Object();
-        private static int testNumber = 0;
+        private static int TestNumber;
 
         [TestFixtureSetUp]
-        public static void ClassInit()
+        public void ClassInit()
         {
-            if (Directory.Exists(testFolder))
+            if (Directory.Exists(TestFolder))
             {
-                Directory.Delete(testFolder, true);
+                Directory.Delete(TestFolder, true);
             }
             System.Threading.Thread.Sleep(100);
-            Directory.CreateDirectory(testFolder);
+            Directory.CreateDirectory(TestFolder);
         }
 
         [SetUp]
@@ -47,38 +47,38 @@ namespace UnitTestProject1
         [Test]
         public void TestEnableMonitorChanges()
         {
-            FileSystemChanges changes = new FileSystemChanges(testFolder);
+            FileSystemChanges changes = new FileSystemChanges(TestFolder);
 
             CreateTestFile(1);
-            System.Threading.Thread.Sleep(10);
+            WaitWatcher();
             Assert.AreEqual(changes.ChangeList.Count, 0);
 
             changes.EnableMonitorChanges = true;
 
-            string name = GetPathname();
             CreateTestFile(2);
-            System.Threading.Thread.Sleep(10);
-            Assert.AreEqual(changes.ChangeList.Count, 1);
+            string name = GetPathname();
+            WaitWatcher();
+            Assert.AreEqual(1, changes.ChangeList.Count);
             Assert.AreEqual(name, changes.ChangeList[0]);
 
-            name = GetPathname();
             CreateTestFile(3);
-            System.Threading.Thread.Sleep(10);
-            Assert.AreEqual(changes.ChangeList.Count, 2);
+            name = GetPathname();
+            WaitWatcher();
+            Assert.AreEqual(2, changes.ChangeList.Count);
             Assert.AreEqual(name, changes.ChangeList[1]);
 
             changes.EnableMonitorChanges = false;
 
             CreateTestFile(4);
-            System.Threading.Thread.Sleep(10);
-            Assert.AreEqual(changes.ChangeList.Count, 2);
+            WaitWatcher();
+            Assert.AreEqual(2, changes.ChangeList.Count);
 
             changes.EnableMonitorChanges = true;
 
-            name = GetPathname();
             CreateTestFile(5);
-            System.Threading.Thread.Sleep(10);
-            Assert.AreEqual(changes.ChangeList.Count, 3);
+            name = GetPathname();
+            WaitWatcher();
+            Assert.AreEqual(3, changes.ChangeList.Count);
             Assert.AreEqual(name, changes.ChangeList[2]);
         }
 
@@ -97,38 +97,38 @@ namespace UnitTestProject1
         [Test]
         public void TestChangeTypeCreated()
         {
-            FileSystemChanges changes = new FileSystemChanges(testFolder);
+            FileSystemChanges changes = new FileSystemChanges(TestFolder);
             changes.EnableMonitorChanges = true;
 
             List<string> names = new List<string>();
-            for (int i = 0; i < normalNumber; ++i)
+            for (int i = 0; i < NormalNumber; ++i)
             {
-                names.Add(GetPathname());
                 CreateTestFile();
+                names.Add(GetPathname());
             }
-            System.Threading.Thread.Sleep(10);
-            Assert.AreEqual(changes.ChangeList.Count, normalNumber);
-            for (int i = 0; i < normalNumber; ++i)
+            WaitWatcher();
+            Assert.AreEqual(NormalNumber, changes.ChangeList.Count);
+            for (int i = 0; i < NormalNumber; ++i)
             {
                 Assert.AreEqual(names[i], changes.ChangeList[i]);
                 Assert.AreEqual(
-                    changes.GetChangeType((string)changes.ChangeList[i]),
-                    FileSystemChanges.ChangeTypes.Created);
+                    FileSystemChanges.ChangeTypes.Created,
+                    changes.GetChangeType((string)changes.ChangeList[i]));
             }
         }
 
         [Test]
         public void TestChangeTypeCreatedHeavy()
         {
-            FileSystemChanges changes = new FileSystemChanges(testFolder);
+            FileSystemChanges changes = new FileSystemChanges(TestFolder);
             changes.EnableMonitorChanges = true;
 
-            for (int i = 0; i < heavyNumber; ++i)
+            for (int i = 0; i < HeavyNumber; ++i)
             {
-                CreateTestFile(0, i / fileInFolderNumber);
+                CreateTestFile(0, i / FileInFolderNumber);
             }
-            System.Threading.Thread.Sleep(10);
-            int totalNumber = heavyNumber + (heavyNumber - 1) / fileInFolderNumber;
+            WaitWatcher();
+            int totalNumber = HeavyNumber + (HeavyNumber - 1) / FileInFolderNumber;
             Assert.AreEqual(changes.ChangeList.Count, totalNumber);
             int fileNumber = 0;
             for (int i = 0; i < changes.ChangeList.Count; ++i)
@@ -141,29 +141,29 @@ namespace UnitTestProject1
                     ++fileNumber;
                 }
             }
-            Assert.AreEqual(fileNumber, heavyNumber);
+            Assert.AreEqual(fileNumber, HeavyNumber);
         }
 
         [Test]
         public void TestChangeTypeChanged()
         {
-            FileSystemChanges changes = new FileSystemChanges(testFolder);
+            FileSystemChanges changes = new FileSystemChanges(TestFolder);
             changes.EnableMonitorChanges = true;
 
             List<string> names = new List<string>();
-            for (int i = 0; i < normalNumber; ++i)
+            for (int i = 0; i < NormalNumber; ++i)
             {
-                names.Add(GetPathname());
                 CreateTestFile();
-            }
-            for (int i = 0; i < normalNumber; ++i)
-            {
                 names.Add(GetPathname());
-                CreateTestFile(names[i],i+1);
             }
-            System.Threading.Thread.Sleep(10);
-            Assert.AreEqual(changes.ChangeList.Count, normalNumber);
-            for (int i = 0; i < normalNumber; ++i)
+            for (int i = 0; i < NormalNumber; ++i)
+            {
+                CreateTestFile(names[i],i+1);
+                names.Add(GetPathname());
+            }
+            WaitWatcher();
+            Assert.AreEqual(changes.ChangeList.Count, NormalNumber);
+            for (int i = 0; i < NormalNumber; ++i)
             {
                 Assert.AreEqual(names[i], changes.ChangeList[i]);
                 Assert.AreEqual(
@@ -181,19 +181,19 @@ namespace UnitTestProject1
         [Test]
         public void TestChangeTypeDeleted()
         {
-            FileSystemChanges changes = new FileSystemChanges(testFolder);
+            FileSystemChanges changes = new FileSystemChanges(TestFolder);
             changes.EnableMonitorChanges = true;
 
             List<string> names = new List<string>();
-            for (int i = 0; i < normalNumber; ++i)
+            for (int i = 0; i < NormalNumber; ++i)
             {
-                names.Add(GetPathname());
                 CreateTestFile();
+                names.Add(GetPathname());
                 File.Delete(names[i]);
             }
-            System.Threading.Thread.Sleep(10);
-            Assert.AreEqual(changes.ChangeList.Count, normalNumber);
-            for (int i = 0; i < normalNumber; ++i)
+            WaitWatcher();
+            Assert.AreEqual(NormalNumber, changes.ChangeList.Count);
+            for (int i = 0; i < NormalNumber; ++i)
             {
                 Assert.AreEqual(names[i], changes.ChangeList[i]);
                 Assert.AreEqual(
@@ -211,7 +211,7 @@ namespace UnitTestProject1
         [Test]
         public void TestChangeTypeNone()
         {
-            FileSystemChanges changes = new FileSystemChanges(testFolder);
+            FileSystemChanges changes = new FileSystemChanges(TestFolder);
             changes.EnableMonitorChanges = true;
             Assert.AreEqual(FileSystemChanges.ChangeTypes.None, changes.GetChangeType(GetPathname()));
         }
@@ -219,16 +219,16 @@ namespace UnitTestProject1
         [Test]
         public void TestChangeTypeForMove()
         {
-            string oldnameOut = Path.Combine(testFolderParent, "test.old");
-            string newnameOut = Path.Combine(testFolderParent, "test.new");
-            string oldname = Path.Combine(testFolder, "test.old");
-            string newname = Path.Combine(testFolder, "test.new");
+            string oldnameOut = Path.Combine(TestFolderParent, "test.old");
+            string newnameOut = Path.Combine(TestFolderParent, "test.new");
+            string oldname = Path.Combine(TestFolder, "test.old");
+            string newname = Path.Combine(TestFolder, "test.new");
 
-            FileSystemChanges changes = new FileSystemChanges(testFolder);
+            FileSystemChanges changes = new FileSystemChanges(TestFolder);
             changes.EnableMonitorChanges = true;
             CreateTestFile(oldname, 1);
             File.Move(oldname, newname);
-            System.Threading.Thread.Sleep(10);
+            WaitWatcher();
             Assert.AreEqual(changes.ChangeList.Count, 2);
             Assert.AreEqual(changes.ChangeList[0], oldname);
             Assert.AreEqual(changes.ChangeList[1], newname);
@@ -236,31 +236,31 @@ namespace UnitTestProject1
             Assert.AreEqual(changes.GetChangeType(newname), FileSystemChanges.ChangeTypes.Created);
             File.Delete(newname);
 
-            changes = new FileSystemChanges(testFolder);
+            changes = new FileSystemChanges(TestFolder);
             changes.EnableMonitorChanges = true;
             CreateTestFile(oldnameOut, 1);
             File.Move(oldnameOut, newname);
-            System.Threading.Thread.Sleep(10);
+            WaitWatcher();
             Assert.AreEqual(changes.ChangeList.Count, 1);
             Assert.AreEqual(changes.ChangeList[0], newname);
             Assert.AreEqual(changes.GetChangeType(newname), FileSystemChanges.ChangeTypes.Created);
             File.Delete(newname);
 
-            changes = new FileSystemChanges(testFolder);
+            changes = new FileSystemChanges(TestFolder);
             changes.EnableMonitorChanges = true;
             CreateTestFile(oldname, 1);
             File.Move(oldname, newnameOut);
-            System.Threading.Thread.Sleep(10);
+            WaitWatcher();
             Assert.AreEqual(changes.ChangeList.Count, 1);
             Assert.AreEqual(changes.ChangeList[0], oldname);
             Assert.AreEqual(changes.GetChangeType(oldname), FileSystemChanges.ChangeTypes.Deleted);
             File.Delete(newnameOut);
 
-            changes = new FileSystemChanges(testFolder);
+            changes = new FileSystemChanges(TestFolder);
             changes.EnableMonitorChanges = true;
             CreateTestFile(oldnameOut, 1);
             File.Move(oldnameOut, newnameOut);
-            System.Threading.Thread.Sleep(10);
+            WaitWatcher();
             Assert.AreEqual(changes.ChangeList.Count, 0);
             File.Delete(newnameOut);
         }
@@ -283,30 +283,19 @@ namespace UnitTestProject1
             Assert.Fail("TODO");
         }
 
-        private string GetPathnameAndNext(int level)
+        private string GetNextPathname(int level)
         {
-            int number = 0;
-            lock (UnitTest1.testLock)
-            {
-                number = UnitTest1.testNumber;
-                ++UnitTest1.testNumber;
-            }
-            return GetPathname(number, level);
+            return GetPathname(Interlocked.Increment(ref TestNumber), level);
         }
 
         private string GetPathname(int level = 0)
         {
-            int number = 0;
-            lock (UnitTest1.testLock)
-            {
-                number = testNumber;
-            }
-            return GetPathname(number, level);
+            return GetPathname(TestNumber, level);
         }
 
         private string GetPathname(int number,int level)
         {
-            string pathname = UnitTest1.testFolder;
+            string pathname = TestFolder;
             for (int i = 1; i <= level; ++i)
             {
                 pathname = System.IO.Path.Combine(pathname, String.Format("folder-{0}", i));
@@ -339,7 +328,7 @@ namespace UnitTestProject1
             Random random = new Random();
             byte[] data = new byte[1024];
 
-            using (FileStream stream = File.OpenWrite(GetPathnameAndNext(level)))
+            using (FileStream stream = File.OpenWrite(GetNextPathname(level)))
             {
                 // Write random data
                 for (int i = 0; i < sizeInKB; i++)
@@ -348,6 +337,11 @@ namespace UnitTestProject1
                     stream.Write(data, 0, data.Length);
                 }
             }
+        }
+
+        private void WaitWatcher()
+        {
+            Thread.Sleep(10);
         }
     }
 }
