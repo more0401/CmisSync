@@ -56,21 +56,21 @@ namespace CmisSync {
         private static Gdk.Cursor default_cursor = new Gdk.Cursor(Gdk.CursorType.LeftPtr);
 
         private string cancelText =
-            CmisSync.Properties.Resources.ResourceManager.GetString("Cancel", CultureInfo.CurrentCulture);
+            CmisSync.Properties_Resources.ResourceManager.GetString("Cancel", CultureInfo.CurrentCulture);
         private string continueText =
-            CmisSync.Properties.Resources.ResourceManager.GetString("Continue", CultureInfo.CurrentCulture);
+            CmisSync.Properties_Resources.ResourceManager.GetString("Continue", CultureInfo.CurrentCulture);
         private string backText =
-            CmisSync.Properties.Resources.ResourceManager.GetString("Back", CultureInfo.CurrentCulture);
+            CmisSync.Properties_Resources.ResourceManager.GetString("Back", CultureInfo.CurrentCulture);
 
-        delegate CmisServer GetRepositoriesFuzzyDelegate(string url, string user, string password);
+        delegate CmisServer GetRepositoriesFuzzyDelegate(Uri url, string user, string password);
 
         delegate string[] GetSubfoldersDelegate(string repositoryId, string path,
             string address, string user, string password);
 
         private void ShowSetupPage()
         {
-            Header = CmisSync.Properties.Resources.ResourceManager.GetString("Welcome", CultureInfo.CurrentCulture);
-            Description = CmisSync.Properties.Resources.ResourceManager.GetString("Intro", CultureInfo.CurrentCulture);
+            Header = CmisSync.Properties_Resources.ResourceManager.GetString("Welcome", CultureInfo.CurrentCulture);
+            Description = CmisSync.Properties_Resources.ResourceManager.GetString("Intro", CultureInfo.CurrentCulture);
 
             Add(new Label("")); // Page must have at least one element in order to show Header and Descripton
 
@@ -103,7 +103,7 @@ namespace CmisSync {
         private void ShowAdd1Page()
         {
 
-            Header = CmisSync.Properties.Resources.ResourceManager.GetString("Where", CultureInfo.CurrentCulture);
+            Header = CmisSync.Properties_Resources.ResourceManager.GetString("Where", CultureInfo.CurrentCulture);
 
             VBox layout_vertical   = new VBox (false, 12);
             HBox layout_fields     = new HBox (true, 12);
@@ -118,7 +118,7 @@ namespace CmisSync {
                 UseMarkup = true,
                           Xalign = 0,
                           Markup = "<b>" + 
-                              CmisSync.Properties.Resources.ResourceManager.GetString("EnterWebAddress", CultureInfo.CurrentCulture) +
+                              CmisSync.Properties_Resources.ResourceManager.GetString("EnterWebAddress", CultureInfo.CurrentCulture) +
                               "</b>"
             };
 
@@ -132,7 +132,7 @@ namespace CmisSync {
                 Xalign = 0,
                        UseMarkup = true,
                        Markup = "<span foreground=\"#808080\" size=\"small\">" +
-                           CmisSync.Properties.Resources.ResourceManager.GetString("Help", CultureInfo.CurrentCulture) + ": " +
+                           CmisSync.Properties_Resources.ResourceManager.GetString("Help", CultureInfo.CurrentCulture) + ": " +
                            "</span>"
             };
             EventBox address_help_urlbox = new EventBox();
@@ -141,7 +141,7 @@ namespace CmisSync {
                 Xalign = 0,
                        UseMarkup = true,
                        Markup = "<span foreground=\"blue\" underline=\"single\" size=\"small\">" +
-                           CmisSync.Properties.Resources.ResourceManager.GetString("WhereToFind", CultureInfo.CurrentCulture) +
+                           CmisSync.Properties_Resources.ResourceManager.GetString("WhereToFind", CultureInfo.CurrentCulture) +
                            "</span>"
             };
             address_help_urlbox.Add(address_help_urllabel);
@@ -166,7 +166,6 @@ namespace CmisSync {
             // User
             Entry user_entry = new Entry () {
                 Text = Controller.PreviousPath,
-                     //RM Sensitive = (Controller.SelectedPlugin.User == null),
                      ActivatesDefault = false
             };
 
@@ -174,41 +173,37 @@ namespace CmisSync {
             Entry password_entry = new Entry () {
                 Text = Controller.PreviousPath,
                      Visibility = false,
-                     //RM Sensitive = (Controller.SelectedPlugin.Password == null),
                      ActivatesDefault = true
             };
 
             Controller.ChangeAddressFieldEvent += delegate (string text,
-                    string example_text, FieldState state) {
+                    string example_text) {
 
                 Application.Invoke (delegate {
                         address_entry.Text      = text;
-                        address_entry.Sensitive = (state == FieldState.Enabled);
                         });
             };
 
             Controller.ChangeUserFieldEvent += delegate (string text,
-                    string example_text, FieldState state) {
+                    string example_text) {
 
                 Application.Invoke (delegate {
                         user_entry.Text      = text;
-                        user_entry.Sensitive = (state == FieldState.Enabled);
                         });
             };
 
             Controller.ChangePasswordFieldEvent += delegate (string text,
-                    string example_text, FieldState state) {
+                    string example_text) {
 
                 Application.Invoke (delegate {
                         password_entry.Text      = text;
-                        password_entry.Sensitive = (state == FieldState.Enabled);
                         });
             };
 
             address_entry.Changed += delegate {
                 string error = Controller.CheckAddPage(address_entry.Text);
                 if (!String.IsNullOrEmpty(error)) {
-                    address_error_label.Markup = "<span foreground=\"red\">" + CmisSync.Properties.Resources.ResourceManager.GetString(error, CultureInfo.CurrentCulture) + "</span>";
+                    address_error_label.Markup = "<span foreground=\"red\">" + CmisSync.Properties_Resources.ResourceManager.GetString(error, CultureInfo.CurrentCulture) + "</span>";
                     address_error_label.Show();
                 } else {
                     address_error_label.Hide();
@@ -225,14 +220,14 @@ namespace CmisSync {
 
             // User
             layout_user.PackStart (new Label () {
-                    Markup = "<b>" + CmisSync.Properties.Resources.ResourceManager.GetString("User", CultureInfo.CurrentCulture) + ":</b>",
+                    Markup = "<b>" + CmisSync.Properties_Resources.ResourceManager.GetString("User", CultureInfo.CurrentCulture) + ":</b>",
                     Xalign = 0
                     }, true, true, 0);
             layout_user.PackStart (user_entry, false, false, 0);
 
             // Password
             layout_password.PackStart (new Label () {
-                    Markup = "<b>" + CmisSync.Properties.Resources.ResourceManager.GetString("Password", CultureInfo.CurrentCulture) + ":</b>",
+                    Markup = "<b>" + CmisSync.Properties_Resources.ResourceManager.GetString("Password", CultureInfo.CurrentCulture) + ":</b>",
                     Xalign = 0
                     }, true, true, 0);
             layout_password.PackStart (password_entry, false, false, 0);
@@ -265,7 +260,7 @@ namespace CmisSync {
                 // Try to find the CMIS server (asynchronous using a delegate)
                 GetRepositoriesFuzzyDelegate dlgt =
                     new GetRepositoriesFuzzyDelegate(CmisUtils.GetRepositoriesFuzzy);
-                IAsyncResult ar = dlgt.BeginInvoke(address_entry.Text, user_entry.Text,
+                IAsyncResult ar = dlgt.BeginInvoke(new Uri(address_entry.Text), user_entry.Text,
                         password_entry.Text, null, null);
                 while (!ar.AsyncWaitHandle.WaitOne(100)) {
                     while (Application.EventsPending()) {
@@ -274,8 +269,8 @@ namespace CmisSync {
                 }
                 CmisServer cmisServer = dlgt.EndInvoke(ar);
 
-                Controller.repositories = cmisServer.repositories;
-                address_entry.Text = cmisServer.url;
+                Controller.repositories = cmisServer.Repositories;
+                address_entry.Text = cmisServer.Url.ToString();
 
                 // Hide wait cursor
                 this.GdkWindow.Cursor = default_cursor;
@@ -283,7 +278,7 @@ namespace CmisSync {
                 if (Controller.repositories == null)
                 {
                     // Show warning
-                    address_error_label.Markup = "<span foreground=\"red\">" + CmisSync.Properties.Resources.ResourceManager.GetString("Sorry", CultureInfo.CurrentCulture) + "</span>";
+                    address_error_label.Markup = "<span foreground=\"red\">" + CmisSync.Properties_Resources.ResourceManager.GetString("Sorry", CultureInfo.CurrentCulture) + "</span>";
                     address_error_label.Show();
                 }
                 else
@@ -309,7 +304,7 @@ namespace CmisSync {
         private void ShowAdd2Page()
         {
 
-            Header = CmisSync.Properties.Resources.ResourceManager.GetString("Which", CultureInfo.CurrentCulture);
+            Header = CmisSync.Properties_Resources.ResourceManager.GetString("Which", CultureInfo.CurrentCulture);
 
             VBox layout_vertical   = new VBox (false, 12);
 
@@ -385,7 +380,8 @@ namespace CmisSync {
                         // Create a sub-item for each subfolder
                         foreach (string subfolder in subfolders) {
                             TreeIter newchild = repoStore.AppendNode(iter);
-                            repoStore.SetValues(newchild, subfolder, new SelectionTreeItem(null, subfolder));
+                            repoStore.SetValues(newchild, System.IO.Path.GetFileName(subfolder),
+                                    new SelectionTreeItem(null, subfolder));
                             if (null == tp) {
                                 tp = repoStore.GetPath(newchild);
                             }
@@ -416,12 +412,12 @@ namespace CmisSync {
 
         private void ShowCustomizePage()
         {
-            Header = CmisSync.Properties.Resources.ResourceManager.GetString("Customize", CultureInfo.CurrentCulture);
+            Header = CmisSync.Properties_Resources.ResourceManager.GetString("Customize", CultureInfo.CurrentCulture);
 
             Label localfolder_label = new Label() {
                 Xalign = 0,
                        UseMarkup = true,
-                       Markup = "<b>" + CmisSync.Properties.Resources.ResourceManager.GetString("EnterLocalFolderName", CultureInfo.CurrentCulture) + "</b>"
+                       Markup = "<b>" + CmisSync.Properties_Resources.ResourceManager.GetString("EnterLocalFolderName", CultureInfo.CurrentCulture) + "</b>"
             };
 
             Entry localfolder_entry = new Entry() {
@@ -432,7 +428,7 @@ namespace CmisSync {
             Label localrepopath_label = new Label() {
                 Xalign = 0,
                        UseMarkup = true,
-                       Markup = "<b>" + CmisSync.Properties.Resources.ResourceManager.GetString("ChangeRepoPath", CultureInfo.CurrentCulture) + "</b>"
+                       Markup = "<b>" + CmisSync.Properties_Resources.ResourceManager.GetString("ChangeRepoPath", CultureInfo.CurrentCulture) + "</b>"
             };
 
             Entry localrepopath_entry = new Entry() {
@@ -452,11 +448,11 @@ namespace CmisSync {
             Button cancel_button = new Button(cancelText);
 
             Button add_button = new Button(
-                    CmisSync.Properties.Resources.ResourceManager.GetString("Add", CultureInfo.CurrentCulture)
+                    CmisSync.Properties_Resources.ResourceManager.GetString("Add", CultureInfo.CurrentCulture)
                     );
 
             Button back_button = new Button(
-                    CmisSync.Properties.Resources.ResourceManager.GetString("Back", CultureInfo.CurrentCulture)
+                    CmisSync.Properties_Resources.ResourceManager.GetString("Back", CultureInfo.CurrentCulture)
                     );
 
             Controller.UpdateAddProjectButtonEvent += delegate(bool button_enabled) {
@@ -468,7 +464,7 @@ namespace CmisSync {
             string error = Controller.CheckRepoName(localfolder_entry.Text);
             if (!String.IsNullOrEmpty(error)) {
                 localfolder_error_label.Markup = "<span foreground=\"#ff8080\">" +
-                    CmisSync.Properties.Resources.ResourceManager.GetString(error, CultureInfo.CurrentCulture) +
+                    CmisSync.Properties_Resources.ResourceManager.GetString(error, CultureInfo.CurrentCulture) +
                     "</span>";
                 localfolder_error_label.Show();
             } else {
@@ -479,7 +475,7 @@ namespace CmisSync {
                 error = Controller.CheckRepoName(localfolder_entry.Text);
                 if (!String.IsNullOrEmpty(error)) {
                     localfolder_error_label.Markup = "<span foreground=\"#ff8080\">" +
-                        CmisSync.Properties.Resources.ResourceManager.GetString(error, CultureInfo.CurrentCulture) +
+                        CmisSync.Properties_Resources.ResourceManager.GetString(error, CultureInfo.CurrentCulture) +
                         "</span>";
                     localfolder_error_label.Show();
                 } else {
@@ -490,7 +486,7 @@ namespace CmisSync {
             error = Controller.CheckRepoPath(localrepopath_entry.Text);
             if (!String.IsNullOrEmpty(error)) {
                 localfolder_error_label.Markup = "<span foreground=\"#ff8080\">" +
-                    CmisSync.Properties.Resources.ResourceManager.GetString(error, CultureInfo.CurrentCulture) +
+                    CmisSync.Properties_Resources.ResourceManager.GetString(error, CultureInfo.CurrentCulture) +
                 "</span>";
                 localfolder_error_label.Show();
             } else {
@@ -501,7 +497,7 @@ namespace CmisSync {
                 error = Controller.CheckRepoPath(localrepopath_entry.Text);
                 if (!String.IsNullOrEmpty(error)) {
                     localfolder_error_label.Markup = "<span foreground=\"#ff8080\">" +
-                        CmisSync.Properties.Resources.ResourceManager.GetString(error, CultureInfo.CurrentCulture) +
+                        CmisSync.Properties_Resources.ResourceManager.GetString(error, CultureInfo.CurrentCulture) +
                         "</span>";
                     localfolder_error_label.Show();
                 } else {
@@ -542,20 +538,15 @@ namespace CmisSync {
 
         private void ShowSyncingPage()
         {
-            Header = CmisSync.Properties.Resources.ResourceManager.GetString("AddingFolder", CultureInfo.CurrentCulture)
+            Header = CmisSync.Properties_Resources.ResourceManager.GetString("AddingFolder", CultureInfo.CurrentCulture)
                 + " ‘" + Controller.SyncingReponame + "’…";
-            Description = CmisSync.Properties.Resources.ResourceManager.GetString("MayTakeTime", CultureInfo.CurrentCulture);
+            Description = CmisSync.Properties_Resources.ResourceManager.GetString("MayTakeTime", CultureInfo.CurrentCulture);
 
             this.progress_bar.Fraction = Controller.ProgressBarPercentage / 100;
 
             Button finish_button = new Button () {
                 Sensitive = false,
                           Label = "Finish"
-            };
-
-            Button cancel_button = new Button (cancelText);
-            cancel_button.Clicked += delegate {
-                Controller.SyncingCancelled ();
             };
 
             Controller.UpdateProgressBarEvent += delegate (double percentage) {
@@ -572,82 +563,7 @@ namespace CmisSync {
             bar_wrapper.PackStart (this.progress_bar, false, false, 15);
 
             Add (bar_wrapper);
-            AddButton (cancel_button);
             AddButton (finish_button);
-
-        }
-
-        private void ShowErrorPage(string [] warnings)
-        {
-            Header = "Oops! Something went wrong" + "…";
-
-            VBox points = new VBox (false, 0);
-            Image list_point_one   = new Image (UIHelpers.GetIcon ("go-next", 16));
-            Image list_point_two   = new Image (UIHelpers.GetIcon ("go-next", 16));
-            Image list_point_three = new Image (UIHelpers.GetIcon ("go-next", 16));
-
-            Label label_one = new Label () {
-                Markup = "<b>" + Controller.PreviousUrl + "</b> is the address we've compiled. " +
-                    "Does this look alright?",
-                    Wrap   = true,
-                    Xalign = 0
-            };
-
-            Label label_two = new Label () {
-                Text   = "Do you have access rights to this remote project?",
-                       Wrap   = true,
-                       Xalign = 0
-            };
-
-            points.PackStart (new Label ("Please check the following:") { Xalign = 0 }, false, false, 6);
-
-            HBox point_one = new HBox (false, 0);
-            point_one.PackStart (list_point_one, false, false, 0);
-            point_one.PackStart (label_one, true, true, 12);
-            points.PackStart (point_one, false, false, 12);
-
-            HBox point_two = new HBox (false, 0);
-            point_two.PackStart (list_point_two, false, false, 0);
-            point_two.PackStart (label_two, true, true, 12);
-            points.PackStart (point_two, false, false, 12);
-
-            if (warnings.Length > 0) {
-                string warnings_markup = "";
-
-                foreach (string warning in warnings)
-                    warnings_markup += "\n<b>" + warning + "</b>";
-
-                Label label_three = new Label () {
-                    Markup = "Here's the raw error message:" + warnings_markup,
-                           Wrap   = true,
-                           Xalign = 0
-                };
-
-                HBox point_three = new HBox (false, 0);
-                point_three.PackStart (list_point_three, false, false, 0);
-                point_three.PackStart (label_three, true, true, 12);
-                points.PackStart (point_three, false, false, 12);
-            }
-
-            points.PackStart (new Label (""), true, true, 0);
-
-            Button cancel_button = new Button (cancelText);
-
-            cancel_button.Clicked += delegate {
-                Controller.PageCancelled ();
-            };
-
-            Button try_again_button = new Button ("Try Again…") {
-                Sensitive = true
-            };
-
-            try_again_button.Clicked += delegate {
-                Controller.ErrorPageCompleted ();
-            };
-
-            AddButton (cancel_button);
-            AddButton (try_again_button);
-            Add (points);
 
         }
 
@@ -655,8 +571,8 @@ namespace CmisSync {
         {
             UrgencyHint = true;
 
-            Header = CmisSync.Properties.Resources.ResourceManager.GetString("Ready", CultureInfo.CurrentCulture);
-            Description = CmisSync.Properties.Resources.ResourceManager.GetString("YouCanFind", CultureInfo.CurrentCulture);
+            Header = CmisSync.Properties_Resources.ResourceManager.GetString("Ready", CultureInfo.CurrentCulture);
+            Description = CmisSync.Properties_Resources.ResourceManager.GetString("YouCanFind", CultureInfo.CurrentCulture);
 
             // A button that opens the synced folder
             Button open_folder_button = new Button (string.Format ("Open {0}",
@@ -681,11 +597,11 @@ namespace CmisSync {
 
         private void ShowTutorialPage()
         {
-            switch (Controller.TutorialPageNumber) {
+            switch (Controller.TutorialCurrentPage) {
                 case 1:
                     {
-                        Header = CmisSync.Properties.Resources.ResourceManager.GetString("WhatsNext", CultureInfo.CurrentCulture);
-                        Description = CmisSync.Properties.Resources.ResourceManager.GetString("CmisSyncCreates", CultureInfo.CurrentCulture);
+                        Header = CmisSync.Properties_Resources.ResourceManager.GetString("WhatsNext", CultureInfo.CurrentCulture);
+                        Description = CmisSync.Properties_Resources.ResourceManager.GetString("CmisSyncCreates", CultureInfo.CurrentCulture);
 
                         Button skip_tutorial_button = new Button ("Skip Tutorial");
                         skip_tutorial_button.Clicked += delegate {
@@ -792,7 +708,7 @@ namespace CmisSync {
                         });
             };
 
-            Controller.ChangePageEvent += delegate (PageType ptype, string [] warnings) {
+            Controller.ChangePageEvent += delegate (PageType ptype) {
                 Application.Invoke (delegate {
                         Reset ();
 
@@ -817,14 +733,9 @@ namespace CmisSync {
                         ShowSyncingPage();
                         break;
 
-                        case PageType.Error:
-                        ShowErrorPage(warnings);
-                        break;
-
                         case PageType.Finished:
                         ShowFinishedPage();
                         break;
-
 
                         case PageType.Tutorial:
                         ShowTutorialPage();

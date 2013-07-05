@@ -120,17 +120,19 @@ namespace CmisSync.Lib.Cmis
 #if __MonoCS__
             try
             {
-                AesManaged myAes = new AesManaged();
-                myAes.Mode = CipherMode.CBC;
-                myAes.IV = new byte[16] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-                myAes.Key = GetCryptoKeyUnix();  // Byte array representing the key. Key MUST be 256 bits
-                myAes.Padding = PaddingMode.PKCS7;
-
-                ICryptoTransform encryptor = myAes.CreateEncryptor();
-
-                byte[] data = System.Text.Encoding.UTF8.GetBytes(value);
-                byte[] crypt = encryptor.TransformFinalBlock(data, 0, data.Length);
-                return Convert.ToBase64String(crypt, Base64FormattingOptions.None);
+                using (PasswordDeriveBytes pdb = new PasswordDeriveBytes(
+                    GetCryptoKey(), new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }))
+                using (AesManaged myAes = new AesManaged())
+                {
+                    myAes.Key = pdb.GetBytes(myAes.KeySize / 8);
+                    myAes.IV = pdb.GetBytes(myAes.BlockSize / 8);
+                    using (ICryptoTransform encryptor = myAes.CreateEncryptor())
+                    {
+                        byte[] data = System.Text.Encoding.UTF8.GetBytes(value);
+                        byte[] crypt = encryptor.TransformFinalBlock(data, 0, data.Length);
+                        return Convert.ToBase64String(crypt, Base64FormattingOptions.None);
+                    }
+                }
             }
 
             catch (CryptographicException e)
@@ -150,18 +152,19 @@ namespace CmisSync.Lib.Cmis
 #if __MonoCS__
             try
             {
-                AesManaged myAes = new AesManaged();
-                myAes.Mode = CipherMode.CBC;
-                myAes.IV = new byte[16] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-                myAes.Key = GetCryptoKeyUnix();  // Byte array representing the key. Key MUST be 256 bits
-                myAes.Padding = PaddingMode.PKCS7;
-
-                ICryptoTransform decryptor = myAes.CreateDecryptor();
-
-                byte[] data = Convert.FromBase64String(value);
-
-                byte[] uncrypt = decryptor.TransformFinalBlock(data, 0, data.Length);
-                return System.Text.Encoding.UTF8.GetString(uncrypt);
+                using (PasswordDeriveBytes pdb = new PasswordDeriveBytes(
+                    GetCryptoKey(), new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }))
+                using (AesManaged myAes = new AesManaged())
+                {
+                    myAes.Key = pdb.GetBytes(myAes.KeySize / 8);
+                    myAes.IV = pdb.GetBytes(myAes.BlockSize / 8);
+                    using (ICryptoTransform decryptor = myAes.CreateDecryptor())
+                    {
+                        byte[] data = Convert.FromBase64String(value);
+                        byte[] uncrypt = decryptor.TransformFinalBlock(data, 0, data.Length);
+                        return System.Text.Encoding.UTF8.GetString(uncrypt);
+                    }
+                }
             }
             catch (Exception e)
             {
@@ -190,17 +193,6 @@ namespace CmisSync.Lib.Cmis
             return System.Text.Encoding.UTF8.GetBytes(
                 "Thou art so farth away, I miss you my dear files❥, with CmisSync be forever by my side!");
         }
-
-#if __MonoCS__
-        /// <summary>
-        /// Salt for the obfuscation. MUST be 256 bits.
-        /// </summary>
-        public static byte[] GetCryptoKeyUnix()
-        {
-            return System.Text.Encoding.UTF8.GetBytes("Thou art so farth away, I miss y");
-        }
-#endif
-
     }
 
 }

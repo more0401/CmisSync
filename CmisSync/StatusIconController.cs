@@ -24,11 +24,13 @@ using Threading = System.Threading;
 using CmisSync.Lib;
 using System.Globalization;
 
-using CmisSync.Properties;
 using System.Diagnostics;
 
 namespace CmisSync {
 
+    /// <summary>
+    /// State of the CmisSync status icon.
+    /// </summary>
     public enum IconState {
         Idle,
         SyncingUp,
@@ -38,7 +40,12 @@ namespace CmisSync {
     }
 
 
+    /// <summary>
+    /// MVC controller for the CmisSync status icon.
+    /// </summary>
     public class StatusIconController {
+
+        // Event controller.
 
         public event UpdateIconEventHandler UpdateIconEvent = delegate { };
         public delegate void UpdateIconEventHandler (int icon_frame);
@@ -51,15 +58,12 @@ namespace CmisSync {
 
         public event UpdateQuitItemEventHandler UpdateQuitItemEvent = delegate { };
         public delegate void UpdateQuitItemEventHandler (bool quit_item_enabled);
-		
-		public event UpdateOpenRecentEventsItemEventHandler UpdateOpenRecentEventsItemEvent = delegate { };
-        public delegate void UpdateOpenRecentEventsItemEventHandler (bool open_recent_events_item_enabled);
 
         public event UpdateSuspendSyncFolderEventHandler UpdateSuspendSyncFolderEvent = delegate { };
         public delegate void UpdateSuspendSyncFolderEventHandler(string reponame);
 		
         public IconState CurrentState = IconState.Idle;
-        public string StateText = Resources.ResourceManager.GetString("Welcome", CultureInfo.CurrentCulture);
+        public string StateText = Properties_Resources.ResourceManager.GetString("Welcome", CultureInfo.CurrentCulture);
 
 
         public readonly int MenuOverflowThreshold   = 9;
@@ -140,9 +144,9 @@ namespace CmisSync {
                     CurrentState = IconState.Idle;
 
                     if (Program.Controller.Folders.Count == 0)
-                        StateText = Resources.ResourceManager.GetString("Welcome", CultureInfo.CurrentCulture);
+                        StateText = Properties_Resources.ResourceManager.GetString("Welcome", CultureInfo.CurrentCulture);
                     else
-                        StateText = Resources.ResourceManager.GetString("FilesUpToDate", CultureInfo.CurrentCulture);
+                        StateText = Properties_Resources.ResourceManager.GetString("FilesUpToDate", CultureInfo.CurrentCulture);
                 }
 
                 UpdateStatusItemEvent (StateText);
@@ -154,9 +158,9 @@ namespace CmisSync {
                     CurrentState = IconState.Idle;
 
                     if (Program.Controller.Folders.Count == 0)
-                        StateText = Resources.ResourceManager.GetString("Welcome", CultureInfo.CurrentCulture);
+                        StateText = Properties_Resources.ResourceManager.GetString("Welcome", CultureInfo.CurrentCulture);
                     else
-                        StateText = Resources.ResourceManager.GetString("FilesUpToDate", CultureInfo.CurrentCulture);
+                        StateText = Properties_Resources.ResourceManager.GetString("FilesUpToDate", CultureInfo.CurrentCulture);
                 }
 
                 UpdateQuitItemEvent (QuitItemEnabled);
@@ -170,7 +174,7 @@ namespace CmisSync {
 
             Program.Controller.OnSyncing += delegate {
 				CurrentState = IconState.Syncing;
-                StateText = Resources.ResourceManager.GetString("SyncingChanges", CultureInfo.CurrentCulture);
+                StateText = Properties_Resources.ResourceManager.GetString("SyncingChanges", CultureInfo.CurrentCulture);
 
                 UpdateStatusItemEvent (StateText);
                 UpdateQuitItemEvent (QuitItemEnabled);
@@ -180,7 +184,7 @@ namespace CmisSync {
 
             Program.Controller.OnError += delegate {
                 CurrentState = IconState.Error;
-                StateText = Resources.ResourceManager.GetString("FailedToSendSomeChanges", CultureInfo.CurrentCulture);
+                StateText = Properties_Resources.ResourceManager.GetString("FailedToSendSomeChanges", CultureInfo.CurrentCulture);
 
                 UpdateQuitItemEvent (QuitItemEnabled);
                 UpdateStatusItemEvent (StateText);
@@ -211,12 +215,6 @@ namespace CmisSync {
         public void AddHostedProjectClicked ()
         {
             Program.Controller.ShowSetupWindow (PageType.Add1);
-        }
-
-
-        public void OpenRecentEventsClicked ()
-        {
-            new Threading.Thread (() => Program.Controller.ShowEventLogWindow ()).Start ();
         }
 
 

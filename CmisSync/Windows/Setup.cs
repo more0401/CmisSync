@@ -41,31 +41,31 @@ using log4net;
 
 namespace CmisSync
 {
-
-    /**
-     * Stores the metadata of an item in the folder selection dialog.
-     */
-    public class SelectionTreeItem
-    {
-        public bool childrenLoaded = false;
-        public string repository; // Only necessary for repository root nodes.
-        public string fullPath;
-        public SelectionTreeItem(string repository, string fullPath)
-        {
-            this.repository = repository;
-            this.fullPath = fullPath;
-        }
-    }
-
+    /// <summary>
+    /// Dialog for the tutorial, and for the wizard to add a new remote folder.
+    /// </summary>
     public class Setup : SetupWindow
     {
         protected static readonly ILog Logger = LogManager.GetLogger(typeof(Setup));
 
+        /// <summary>
+        /// MVC controller.
+        /// </summary>
         public SetupController Controller = new SetupController();
 
+        delegate CmisServer GetRepositoriesFuzzyDelegate(Uri url, string user, string password);
+
+        delegate string[] GetSubfoldersDelegate(string repositoryId, string path,
+            string address, string user, string password);
+
+        /// <summary>
+        /// Constructor.
+        /// </summary>
         public Setup()
         {
             Logger.Info("Entering constructor.");
+
+            // Defines how to show the setup window.
             Controller.ShowWindowEvent += delegate
             {
                 Dispatcher.BeginInvoke((Action)delegate
@@ -78,6 +78,7 @@ namespace CmisSync
                 });
             };
 
+            // Defines how to hide the setup windows.
             Controller.HideWindowEvent += delegate
             {
                 Dispatcher.BeginInvoke((Action)delegate
@@ -86,30 +87,35 @@ namespace CmisSync
                 });
             };
 
-            Controller.ChangePageEvent += delegate(PageType type, string[] warnings)
+            // Defines what to do when changing page.
+            // The remote folder addition wizard has several steps.
+            Controller.ChangePageEvent += delegate(PageType type)
             {
                 Dispatcher.BeginInvoke((Action)delegate
                 {
                     Logger.Info("Entering ChangePageEvent.");
                     Reset();
 
+                    // Show appropriate setup page.
                     switch (type)
                     {
-
+                        // Welcome page that shows up at first run.
                         #region Page Setup
                         case PageType.Setup:
                             {
-                                Header = CmisSync.Properties.Resources.ResourceManager.GetString("Welcome", CultureInfo.CurrentCulture);
-                                Description = CmisSync.Properties.Resources.ResourceManager.GetString("Intro", CultureInfo.CurrentCulture);
+                                // UI elements.
+
+                                Header = CmisSync.Properties_Resources.ResourceManager.GetString("Welcome", CultureInfo.CurrentCulture);
+                                Description = CmisSync.Properties_Resources.ResourceManager.GetString("Intro", CultureInfo.CurrentCulture);
 
                                 Button cancel_button = new Button()
                                 {
-                                    Content = CmisSync.Properties.Resources.ResourceManager.GetString("Cancel", CultureInfo.CurrentCulture)
+                                    Content = CmisSync.Properties_Resources.ResourceManager.GetString("Cancel", CultureInfo.CurrentCulture)
                                 };
 
                                 Button continue_button = new Button()
                                 {
-                                    Content = CmisSync.Properties.Resources.ResourceManager.GetString("Continue", CultureInfo.CurrentCulture),
+                                    Content = CmisSync.Properties_Resources.ResourceManager.GetString("Continue", CultureInfo.CurrentCulture),
                                     IsEnabled = false
                                 };
 
@@ -117,6 +123,8 @@ namespace CmisSync
                                 Buttons.Add(cancel_button);
 
                                 continue_button.Focus();
+
+                                // Actions.
 
                                 Controller.UpdateSetupContinueButtonEvent += delegate(bool enabled)
                                 {
@@ -146,15 +154,208 @@ namespace CmisSync
                             }
                         #endregion
 
+                        #region Page Tutorial
+                        case PageType.Tutorial:
+                            {
+                                switch (Controller.TutorialCurrentPage)
+                                {
+                                    // First page of the tutorial.
+                                    case 1:
+                                        {
+                                            // UI elements.
+
+                                            Header = CmisSync.Properties_Resources.ResourceManager.GetString("WhatsNext", CultureInfo.CurrentCulture);
+                                            Description = CmisSync.Properties_Resources.ResourceManager.GetString("CmisSyncCreates", CultureInfo.CurrentCulture);
+
+                                            WPF.Image slide_image = new WPF.Image()
+                                            {
+                                                Width = 350,
+                                                Height = 200
+                                            };
+
+                                            slide_image.Source = UIHelpers.GetImageSource("tutorial-slide-1");
+
+                                            Button skip_tutorial_button = new Button()
+                                            {
+                                                Content = CmisSync.Properties_Resources.ResourceManager.GetString("SkipTutorial", CultureInfo.CurrentCulture)
+                                            };
+
+                                            Button continue_button = new Button()
+                                            {
+                                                Content = CmisSync.Properties_Resources.ResourceManager.GetString("Continue", CultureInfo.CurrentCulture)
+                                            };
+
+
+                                            ContentCanvas.Children.Add(slide_image);
+                                            Canvas.SetLeft(slide_image, 215);
+                                            Canvas.SetTop(slide_image, 130);
+
+                                            Buttons.Add(continue_button);
+                                            Buttons.Add(skip_tutorial_button);
+
+                                            // Actions.
+
+                                            skip_tutorial_button.Click += delegate
+                                            {
+                                                Controller.TutorialSkipped();
+                                            };
+
+                                            continue_button.Click += delegate
+                                            {
+                                                Controller.TutorialPageCompleted();
+                                            };
+
+                                            break;
+                                        }
+
+                                    // Second page of the tutorial.
+                                    case 2:
+                                        {
+                                            // UI elements.
+
+                                            Header = CmisSync.Properties_Resources.ResourceManager.GetString("Synchronization", CultureInfo.CurrentCulture);
+                                            Description = CmisSync.Properties_Resources.ResourceManager.GetString("DocumentsAre", CultureInfo.CurrentCulture);
+
+
+                                            Button continue_button = new Button()
+                                            {
+                                                Content = CmisSync.Properties_Resources.ResourceManager.GetString("Continue", CultureInfo.CurrentCulture)
+                                            };
+
+                                            WPF.Image slide_image = new WPF.Image()
+                                            {
+                                                Width = 350,
+                                                Height = 200
+                                            };
+
+                                            slide_image.Source = UIHelpers.GetImageSource("tutorial-slide-2");
+
+
+                                            ContentCanvas.Children.Add(slide_image);
+                                            Canvas.SetLeft(slide_image, 215);
+                                            Canvas.SetTop(slide_image, 130);
+
+                                            Buttons.Add(continue_button);
+
+                                            // Actions.
+
+                                            continue_button.Click += delegate
+                                            {
+                                                Controller.TutorialPageCompleted();
+                                            };
+
+                                            break;
+                                        }
+
+                                    // Third page of the tutorial.
+                                    case 3:
+                                        {
+                                            // UI elements.
+
+                                            Header = CmisSync.Properties_Resources.ResourceManager.GetString("StatusIcon", CultureInfo.CurrentCulture);
+                                            Description = CmisSync.Properties_Resources.ResourceManager.GetString("StatusIconShows", CultureInfo.CurrentCulture);
+
+
+                                            Button continue_button = new Button()
+                                            {
+                                                Content = CmisSync.Properties_Resources.ResourceManager.GetString("Continue", CultureInfo.CurrentCulture)
+                                            };
+
+                                            WPF.Image slide_image = new WPF.Image()
+                                            {
+                                                Width = 350,
+                                                Height = 200
+                                            };
+
+                                            slide_image.Source = UIHelpers.GetImageSource("tutorial-slide-3");
+
+
+                                            ContentCanvas.Children.Add(slide_image);
+                                            Canvas.SetLeft(slide_image, 215);
+                                            Canvas.SetTop(slide_image, 130);
+
+                                            Buttons.Add(continue_button);
+
+                                            // Actions.
+
+                                            continue_button.Click += delegate
+                                            {
+                                                Controller.TutorialPageCompleted();
+                                            };
+
+                                            break;
+                                        }
+
+                                    // Fourth page of the tutorial.
+                                    case 4:
+                                        {
+                                            // UI elements.
+
+                                            Header = CmisSync.Properties_Resources.ResourceManager.GetString("AddFolders", CultureInfo.CurrentCulture);
+                                            Description = CmisSync.Properties_Resources.ResourceManager.GetString("YouCan", CultureInfo.CurrentCulture);
+
+
+                                            Button finish_button = new Button()
+                                            {
+                                                Content = CmisSync.Properties_Resources.ResourceManager.GetString("Finish", CultureInfo.CurrentCulture)
+                                            };
+
+                                            WPF.Image slide_image = new WPF.Image()
+                                            {
+                                                Width = 350,
+                                                Height = 200
+                                            };
+
+                                            slide_image.Source = UIHelpers.GetImageSource("tutorial-slide-4");
+
+                                            CheckBox check_box = new CheckBox()
+                                            {
+                                                Content = CmisSync.Properties_Resources.ResourceManager.GetString("Startup", CultureInfo.CurrentCulture),
+                                                IsChecked = true
+                                            };
+
+
+                                            ContentCanvas.Children.Add(slide_image);
+                                            Canvas.SetLeft(slide_image, 215);
+                                            Canvas.SetTop(slide_image, 130);
+
+                                            ContentCanvas.Children.Add(check_box);
+                                            Canvas.SetLeft(check_box, 185);
+                                            Canvas.SetBottom(check_box, 12);
+
+                                            Buttons.Add(finish_button);
+
+                                            // Actions.
+
+                                            check_box.Click += delegate
+                                            {
+                                                Controller.StartupItemChanged(check_box.IsChecked.Value);
+                                            };
+
+                                            finish_button.Click += delegate
+                                            {
+                                                Controller.TutorialPageCompleted();
+                                            };
+
+                                            break;
+                                        }
+                                }
+                                break;
+                            }
+                        #endregion
+
+                        // First step of the remote folder addition dialog: Specifying the server.
                         #region Page Add1
                         case PageType.Add1:
                             {
-                                Header = CmisSync.Properties.Resources.ResourceManager.GetString("Where", CultureInfo.CurrentCulture);
+                                // UI elements.
 
-                                // Address
+                                Header = CmisSync.Properties_Resources.ResourceManager.GetString("Where", CultureInfo.CurrentCulture);
+
+                                // Address input UI.
                                 TextBlock address_label = new TextBlock()
                                 {
-                                    Text = CmisSync.Properties.Resources.ResourceManager.GetString("EnterWebAddress", CultureInfo.CurrentCulture),
+                                    Text = CmisSync.Properties_Resources.ResourceManager.GetString("EnterWebAddress", CultureInfo.CurrentCulture),
                                     FontWeight = FontWeights.Bold
                                 };
 
@@ -166,11 +367,11 @@ namespace CmisSync
 
                                 TextBlock address_help_label = new TextBlock()
                                 {
-                                    Text = CmisSync.Properties.Resources.ResourceManager.GetString("Help", CultureInfo.CurrentCulture) + ": ",
+                                    Text = CmisSync.Properties_Resources.ResourceManager.GetString("Help", CultureInfo.CurrentCulture) + ": ",
                                     FontSize = 11,
                                     Foreground = new SolidColorBrush(Color.FromRgb(128, 128, 128))
                                 };
-                                Run run = new Run(CmisSync.Properties.Resources.ResourceManager.GetString("WhereToFind", CultureInfo.CurrentCulture));
+                                Run run = new Run(CmisSync.Properties_Resources.ResourceManager.GetString("WhereToFind", CultureInfo.CurrentCulture));
                                 Hyperlink link = new Hyperlink(run);
                                 link.NavigateUri = new Uri("https://github.com/nicolas-raoul/CmisSync/wiki/What-address");
                                 address_help_label.Inlines.Add(link);
@@ -186,10 +387,10 @@ namespace CmisSync
                                     Visibility = Visibility.Hidden
                                 };
 
-                                // User
+                                // User input UI.
                                 TextBlock user_label = new TextBlock()
                                 {
-                                    Text = CmisSync.Properties.Resources.ResourceManager.GetString("User", CultureInfo.CurrentCulture) + ":",
+                                    Text = CmisSync.Properties_Resources.ResourceManager.GetString("User", CultureInfo.CurrentCulture) + ":",
                                     FontWeight = FontWeights.Bold,
                                     Width = 200
                                 };
@@ -207,10 +408,10 @@ namespace CmisSync
                                     Foreground = new SolidColorBrush(Color.FromRgb(128, 128, 128))
                                 };
 
-                                // Password
+                                // Password input UI.
                                 TextBlock password_label = new TextBlock()
                                 {
-                                    Text = CmisSync.Properties.Resources.ResourceManager.GetString("Password", CultureInfo.CurrentCulture) + ":",
+                                    Text = CmisSync.Properties_Resources.ResourceManager.GetString("Password", CultureInfo.CurrentCulture) + ":",
                                     FontWeight = FontWeights.Bold,
                                     Width = 200
                                 };
@@ -227,14 +428,15 @@ namespace CmisSync
                                     Foreground = new SolidColorBrush(Color.FromRgb(128, 128, 128))
                                 };
 
+                                // Buttons.
                                 Button cancel_button = new Button()
                                 {
-                                    Content = CmisSync.Properties.Resources.ResourceManager.GetString("Cancel", CultureInfo.CurrentCulture)
+                                    Content = CmisSync.Properties_Resources.ResourceManager.GetString("Cancel", CultureInfo.CurrentCulture)
                                 };
 
                                 Button continue_button = new Button()
                                 {
-                                    Content = CmisSync.Properties.Resources.ResourceManager.GetString("Continue", CultureInfo.CurrentCulture)
+                                    Content = CmisSync.Properties_Resources.ResourceManager.GetString("Continue", CultureInfo.CurrentCulture)
                                 };
 
                                 Buttons.Add(continue_button);
@@ -289,36 +491,34 @@ namespace CmisSync
                                 address_box.Focus();
                                 address_box.Select(address_box.Text.Length, 0);
 
+                                // Actions.
 
                                 Controller.ChangeAddressFieldEvent += delegate(string text,
-                                    string example_text, FieldState state)
+                                    string example_text)
                                 {
                                     Dispatcher.BeginInvoke((Action)delegate
                                     {
                                         address_box.Text = text;
-                                        address_box.IsEnabled = (state == FieldState.Enabled);
                                         address_help_label.Text = example_text;
                                     });
                                 };
 
                                 Controller.ChangeUserFieldEvent += delegate(string text,
-                                    string example_text, FieldState state)
+                                    string example_text)
                                 {
                                     Dispatcher.BeginInvoke((Action)delegate
                                     {
                                         user_box.Text = text;
-                                        user_box.IsEnabled = (state == FieldState.Enabled);
                                         user_help_label.Text = example_text;
                                     });
                                 };
 
                                 Controller.ChangePasswordFieldEvent += delegate(string text,
-                                    string example_text, FieldState state)
+                                    string example_text)
                                 {
                                     Dispatcher.BeginInvoke((Action)delegate
                                     {
                                         password_box.Password = text;
-                                        password_box.IsEnabled = (state == FieldState.Enabled);
                                         password_help_label.Text = example_text;
                                     });
                                 };
@@ -338,22 +538,11 @@ namespace CmisSync
                                     string error = Controller.CheckAddPage(address_box.Text);
                                     if (!String.IsNullOrEmpty(error))
                                     {
-                                        address_error_label.Text = CmisSync.Properties.Resources.ResourceManager.GetString(error, CultureInfo.CurrentCulture);
+                                        address_error_label.Text = CmisSync.Properties_Resources.ResourceManager.GetString(error, CultureInfo.CurrentCulture);
                                         address_error_label.Visibility = Visibility.Visible;
                                     }
                                     else address_error_label.Visibility = Visibility.Hidden;
                                 };
-
-                                //checkurl_button.Click += delegate
-                                //{
-                                //    string error = Controller.CheckAddPage(address_box.Text);
-                                //    if (!String.IsNullOrEmpty(error))
-                                //    {
-                                //        address_error_label.Text = CmisSync.Properties.Resources.ResourceManager.GetString(error, CultureInfo.CurrentCulture);
-                                //        address_error_label.Visibility = Visibility.Visible;
-                                //    }
-                                //    else address_error_label.Visibility = Visibility.Hidden;
-                                //};
 
                                 cancel_button.Click += delegate
                                 {
@@ -365,41 +554,53 @@ namespace CmisSync
                                     // Show wait cursor
                                     System.Windows.Forms.Cursor.Current = System.Windows.Forms.Cursors.WaitCursor;
 
-                                    // Try to find the CMIS server
-                                    CmisServer cmisServer = CmisUtils.GetRepositoriesFuzzy(
-                                        address_box.Text, user_box.Text, password_box.Password);
-                                    Controller.repositories = cmisServer.repositories;
-                                    address_box.Text = cmisServer.url;
+                                    // Try to find the CMIS server (asynchronously)
+                                    GetRepositoriesFuzzyDelegate dlgt =
+                                        new GetRepositoriesFuzzyDelegate(CmisUtils.GetRepositoriesFuzzy);
+                                    IAsyncResult ar = dlgt.BeginInvoke(new Uri(address_box.Text), user_box.Text,
+                                        password_box.Password, null, null);
+                                    while (!ar.AsyncWaitHandle.WaitOne(100)) {
+                                        System.Windows.Forms.Application.DoEvents();
+                                    }
+                                    CmisServer cmisServer = dlgt.EndInvoke(ar);
+
+                                    Controller.repositories = cmisServer.Repositories;
+                                    address_box.Text = cmisServer.Url.ToString();
 
                                     // Hide wait cursor
                                     System.Windows.Forms.Cursor.Current = System.Windows.Forms.Cursors.Default;
 
                                     if (Controller.repositories == null)
                                     {
-                                        // Show warning
-                                        address_error_label.Text = CmisSync.Properties.Resources.ResourceManager.GetString("Sorry", CultureInfo.CurrentCulture);
+                                        // Could not retrieve repositories list from server, show warning.
+                                        address_error_label.Text = CmisSync.Properties_Resources.ResourceManager.GetString("Sorry", CultureInfo.CurrentCulture);
                                         address_error_label.Visibility = Visibility.Visible;
                                     }
                                     else
                                     {
-                                        // Continue to folder selection
+                                        // Continue to next step, which is choosing a particular folder.
                                         Controller.Add1PageCompleted(
                                             address_box.Text, user_box.Text, password_box.Password);
                                     }
                                 };
-
                                 break;
                             }
                         #endregion
 
+                        // Second step of the remote folder addition dialog: choosing the folder.
                         #region Page Add2
                         case PageType.Add2:
                             {
-                                Header = CmisSync.Properties.Resources.ResourceManager.GetString("Which", CultureInfo.CurrentCulture);
+                                // UI elements.
 
+                                Header = CmisSync.Properties_Resources.ResourceManager.GetString("Which", CultureInfo.CurrentCulture);
+
+                                // A tree allowing the user to browse CMIS repositories/folders.
                                 System.Windows.Controls.TreeView treeView = new System.Windows.Controls.TreeView();
                                 treeView.Width = 410;
                                 treeView.Height = 267;
+
+                                // Some CMIS servers hold several repositories (ex:Nuxeo). Show one root per repository.
                                 foreach (KeyValuePair<String, String> repository in Controller.repositories)
                                 {
                                     System.Windows.Controls.TreeViewItem item = new System.Windows.Controls.TreeViewItem();
@@ -412,6 +613,7 @@ namespace CmisSync
                                 Canvas.SetTop(treeView, 70);
                                 Canvas.SetLeft(treeView, 185);
 
+                                // Action: when an element in the tree is clicked, loads its children and show them.
                                 treeView.SelectedItemChanged += delegate
                                 {
                                     // Identify the selected remote path.
@@ -436,10 +638,16 @@ namespace CmisSync
                                     {
                                         System.Windows.Forms.Cursor.Current = System.Windows.Forms.Cursors.WaitCursor;
 
-                                        // Get list of subfolders
-                                        string[] subfolders = CmisUtils.GetSubfolders(Controller.saved_repository, Controller.saved_remote_path,
-                                            Controller.saved_address, Controller.saved_user, Controller.saved_password);
-
+                                        // Get list of subfolders (asynchronously)
+                                        GetSubfoldersDelegate dlgt = new GetSubfoldersDelegate(CmisUtils.GetSubfolders);
+                                        IAsyncResult ar = dlgt.BeginInvoke(Controller.saved_repository,
+                                            Controller.saved_remote_path, Controller.saved_address,
+                                            Controller.saved_user, Controller.saved_password, null, null);
+                                        while (!ar.AsyncWaitHandle.WaitOne(100)) {
+                                            System.Windows.Forms.Application.DoEvents();
+                                        }
+                                        string[] subfolders = dlgt.EndInvoke(ar);
+                                        
                                         // Create a sub-item for each subfolder
                                         foreach (string subfolder in subfolders)
                                         {
@@ -457,17 +665,17 @@ namespace CmisSync
 
                                 Button cancel_button = new Button()
                                 {
-                                    Content = CmisSync.Properties.Resources.ResourceManager.GetString("Cancel", CultureInfo.CurrentCulture)
+                                    Content = CmisSync.Properties_Resources.ResourceManager.GetString("Cancel", CultureInfo.CurrentCulture)
                                 };
 
                                 Button continue_button = new Button()
                                 {
-                                    Content = CmisSync.Properties.Resources.ResourceManager.GetString("Continue", CultureInfo.CurrentCulture)
+                                    Content = CmisSync.Properties_Resources.ResourceManager.GetString("Continue", CultureInfo.CurrentCulture)
                                 };
 
                                 Button back_button = new Button()
                                 {
-                                    Content = CmisSync.Properties.Resources.ResourceManager.GetString("Back", CultureInfo.CurrentCulture)
+                                    Content = CmisSync.Properties_Resources.ResourceManager.GetString("Back", CultureInfo.CurrentCulture)
                                 };
 
                                 Buttons.Add(back_button);
@@ -495,15 +703,18 @@ namespace CmisSync
                             }
                         #endregion
 
+                        // Third step of the remote folder addition dialog: Customizing the local folder.
                         #region Page Customize
                         case PageType.Customize:
                             {
-                                Header = CmisSync.Properties.Resources.ResourceManager.GetString("Customize", CultureInfo.CurrentCulture);
+                                // UI elements.
+
+                                Header = CmisSync.Properties_Resources.ResourceManager.GetString("Customize", CultureInfo.CurrentCulture);
 
                                 // Customize local folder name
                                 TextBlock localfolder_label = new TextBlock()
                                 {
-                                    Text = CmisSync.Properties.Resources.ResourceManager.GetString("EnterLocalFolderName", CultureInfo.CurrentCulture),
+                                    Text = CmisSync.Properties_Resources.ResourceManager.GetString("EnterLocalFolderName", CultureInfo.CurrentCulture),
                                     FontWeight = FontWeights.Bold
                                 };
 
@@ -515,7 +726,7 @@ namespace CmisSync
 
                                 TextBlock localrepopath_label = new TextBlock()
                                 {
-                                    Text = CmisSync.Properties.Resources.ResourceManager.GetString("ChangeRepoPath", CultureInfo.CurrentCulture),
+                                    Text = CmisSync.Properties_Resources.ResourceManager.GetString("ChangeRepoPath", CultureInfo.CurrentCulture),
                                     FontWeight = FontWeights.Bold
                                 };
 
@@ -539,17 +750,17 @@ namespace CmisSync
 
                                 Button cancel_button = new Button()
                                 {
-                                    Content = CmisSync.Properties.Resources.ResourceManager.GetString("Cancel", CultureInfo.CurrentCulture)
+                                    Content = CmisSync.Properties_Resources.ResourceManager.GetString("Cancel", CultureInfo.CurrentCulture)
                                 };
 
                                 Button add_button = new Button()
                                 {
-                                    Content = CmisSync.Properties.Resources.ResourceManager.GetString("Add", CultureInfo.CurrentCulture)
+                                    Content = CmisSync.Properties_Resources.ResourceManager.GetString("Add", CultureInfo.CurrentCulture)
                                 };
 
                                 Button back_button = new Button()
                                 {
-                                    Content = CmisSync.Properties.Resources.ResourceManager.GetString("Back", CultureInfo.CurrentCulture)
+                                    Content = CmisSync.Properties_Resources.ResourceManager.GetString("Back", CultureInfo.CurrentCulture)
                                 };
 
                                 Buttons.Add(back_button);
@@ -585,6 +796,8 @@ namespace CmisSync
                                 localfolder_box.Focus();
                                 localfolder_box.Select(localfolder_box.Text.Length, 0);
 
+                                // Actions.
+
                                 Controller.UpdateAddProjectButtonEvent += delegate(bool button_enabled)
                                 {
                                     Dispatcher.BeginInvoke((Action)delegate
@@ -593,11 +806,13 @@ namespace CmisSync
                                     });
                                 };
 
+                                // Repo name validity.
+
                                 string error = Controller.CheckRepoName(localfolder_box.Text);
 
                                 if (!String.IsNullOrEmpty(error))
                                 {
-                                    localfolder_error_label.Text = CmisSync.Properties.Resources.ResourceManager.GetString(error, CultureInfo.CurrentCulture);
+                                    localfolder_error_label.Text = CmisSync.Properties_Resources.ResourceManager.GetString(error, CultureInfo.CurrentCulture);
                                     localfolder_error_label.Visibility = Visibility.Visible;
                                 }
                                 else localfolder_error_label.Visibility = Visibility.Hidden;
@@ -607,16 +822,18 @@ namespace CmisSync
                                     error = Controller.CheckRepoName(localfolder_box.Text);
                                     if (!String.IsNullOrEmpty(error))
                                     {
-                                        localfolder_error_label.Text = CmisSync.Properties.Resources.ResourceManager.GetString(error, CultureInfo.CurrentCulture);
+                                        localfolder_error_label.Text = CmisSync.Properties_Resources.ResourceManager.GetString(error, CultureInfo.CurrentCulture);
                                         localfolder_error_label.Visibility = Visibility.Visible;
                                     }
                                     else localfolder_error_label.Visibility = Visibility.Hidden;
                                 };
 
+                                // Repo path validity.
+
                                 error = Controller.CheckRepoPath(localrepopath_box.Text);
                                 if (!String.IsNullOrEmpty(error))
                                 {
-                                    localfolder_error_label.Text = CmisSync.Properties.Resources.ResourceManager.GetString(error, CultureInfo.CurrentCulture);
+                                    localfolder_error_label.Text = CmisSync.Properties_Resources.ResourceManager.GetString(error, CultureInfo.CurrentCulture);
                                     localfolder_error_label.Visibility = Visibility.Visible;
                                 }
                                 else localfolder_error_label.Visibility = Visibility.Hidden;
@@ -626,11 +843,13 @@ namespace CmisSync
                                     error = Controller.CheckRepoPath(localrepopath_box.Text);
                                     if (!String.IsNullOrEmpty(error))
                                     {
-                                        localfolder_error_label.Text = CmisSync.Properties.Resources.ResourceManager.GetString(error, CultureInfo.CurrentCulture);
+                                        localfolder_error_label.Text = CmisSync.Properties_Resources.ResourceManager.GetString(error, CultureInfo.CurrentCulture);
                                         localfolder_error_label.Visibility = Visibility.Visible;
                                     }
                                     else localfolder_error_label.Visibility = Visibility.Hidden;
                                 };
+
+                                // Other actions.
 
                                 cancel_button.Click += delegate
                                 {
@@ -650,21 +869,20 @@ namespace CmisSync
                             }
                         #endregion
 
+                        // Fourth page of the remote folder addition dialog: starting to sync.
+                        // TODO: This step should be removed. Now it appears just a brief instant, because sync is asynchronous.
                         #region Page Syncing
                         case PageType.Syncing:
                             {
-                                Header = CmisSync.Properties.Resources.ResourceManager.GetString("AddingFolder", CultureInfo.CurrentCulture) + " ‘" + Controller.SyncingReponame + "’…";
-                                Description = CmisSync.Properties.Resources.ResourceManager.GetString("MayTakeTime", CultureInfo.CurrentCulture);
+                                // UI elements.
+
+                                Header = CmisSync.Properties_Resources.ResourceManager.GetString("AddingFolder", CultureInfo.CurrentCulture) + " ‘" + Controller.SyncingReponame + "’…";
+                                Description = CmisSync.Properties_Resources.ResourceManager.GetString("MayTakeTime", CultureInfo.CurrentCulture);
 
                                 Button finish_button = new Button()
                                 {
-                                    Content = CmisSync.Properties.Resources.ResourceManager.GetString("Finish", CultureInfo.CurrentCulture),
+                                    Content = CmisSync.Properties_Resources.ResourceManager.GetString("Finish", CultureInfo.CurrentCulture),
                                     IsEnabled = false
-                                };
-
-                                Button cancel_button = new Button()
-                                {
-                                    Content = CmisSync.Properties.Resources.ResourceManager.GetString("Cancel", CultureInfo.CurrentCulture)
                                 };
 
                                 ProgressBar progress_bar = new ProgressBar()
@@ -681,9 +899,9 @@ namespace CmisSync
 
                                 TaskbarItemInfo.ProgressState = TaskbarItemProgressState.Normal;
 
-                                Buttons.Add(cancel_button);
                                 Buttons.Add(finish_button);
 
+                                // Actions.
 
                                 Controller.UpdateProgressBarEvent += delegate(double percentage)
                                 {
@@ -694,124 +912,28 @@ namespace CmisSync
                                     });
                                 };
 
-                                cancel_button.Click += delegate
-                                {
-                                    Controller.SyncingCancelled();
-                                };
-
                                 break;
                             }
                         #endregion
 
-                        #region Page Error
-                        case PageType.Error:
-                            {
-                                Header = "Oops! Something went wrong…";
-                                Description = "Please check the following:";
-
-                                TextBlock help_block = new TextBlock()
-                                {
-                                    TextWrapping = TextWrapping.Wrap,
-                                    Width = 310
-                                };
-
-                                TextBlock bullets_block = new TextBlock()
-                                {
-                                    Text = "•\n\n\n•"
-                                };
-
-                                help_block.Inlines.Add(new Bold(new Run(Controller.PreviousUrl)));
-                                help_block.Inlines.Add(" is the address we've compiled. Does this look alright?\n\n");
-                                help_block.Inlines.Add("Do you have access rights to this remote project?");
-
-                                if (warnings.Length > 0)
-                                {
-                                    bullets_block.Text += "\n\n•";
-                                    help_block.Inlines.Add("\n\nHere's the raw error message:");
-
-                                    foreach (string warning in warnings)
-                                    {
-                                        help_block.Inlines.Add("\n");
-                                        help_block.Inlines.Add(new Bold(new Run(warning)));
-                                    }
-                                }
-
-                                Button cancel_button = new Button()
-                                {
-                                    Content = "Cancel"
-                                };
-
-                                Button try_again_button = new Button()
-                                {
-                                    Content = "Try again…"
-                                };
-
-
-                                ContentCanvas.Children.Add(bullets_block);
-                                Canvas.SetLeft(bullets_block, 195);
-                                Canvas.SetTop(bullets_block, 100);
-
-                                ContentCanvas.Children.Add(help_block);
-                                Canvas.SetLeft(help_block, 210);
-                                Canvas.SetTop(help_block, 100);
-
-                                TaskbarItemInfo.ProgressValue = 1.0;
-                                TaskbarItemInfo.ProgressState = TaskbarItemProgressState.Error;
-
-                                Buttons.Add(try_again_button);
-                                Buttons.Add(cancel_button);
-
-
-                                cancel_button.Click += delegate
-                                {
-                                    Controller.PageCancelled();
-                                };
-
-                                try_again_button.Click += delegate
-                                {
-                                    Controller.ErrorPageCompleted();
-                                };
-
-                                break;
-                            }
-                        #endregion
-
+                        // Final page of the remote folder addition dialog: end of the addition wizard.
                         #region Page Finished
                         case PageType.Finished:
                             {
-                                Header = CmisSync.Properties.Resources.ResourceManager.GetString("Ready", CultureInfo.CurrentCulture);
-                                Description = CmisSync.Properties.Resources.ResourceManager.GetString("YouCanFind", CultureInfo.CurrentCulture);
+                                // UI elements.
+
+                                Header = CmisSync.Properties_Resources.ResourceManager.GetString("Ready", CultureInfo.CurrentCulture);
+                                Description = CmisSync.Properties_Resources.ResourceManager.GetString("YouCanFind", CultureInfo.CurrentCulture);
 
                                 Button finish_button = new Button()
                                 {
-                                    Content = CmisSync.Properties.Resources.ResourceManager.GetString("Finish", CultureInfo.CurrentCulture)
+                                    Content = CmisSync.Properties_Resources.ResourceManager.GetString("Finish", CultureInfo.CurrentCulture)
                                 };
 
                                 Button open_folder_button = new Button()
                                 {
-                                    Content = CmisSync.Properties.Resources.ResourceManager.GetString("OpenFolder", CultureInfo.CurrentCulture)
+                                    Content = CmisSync.Properties_Resources.ResourceManager.GetString("OpenFolder", CultureInfo.CurrentCulture)
                                 };
-
-                                /*if (warnings.Length > 0) {
-                                    Image warning_image = new Image () {
-                                        Source = Imaging.CreateBitmapSourceFromHIcon (Drawing.SystemIcons.Information.Handle,
-                                            Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions ())
-                                    };
-							
-                                    TextBlock warning_block = new TextBlock () {
-                                        Text         = warnings [0],
-                                        Width        = 310,
-                                        TextWrapping = TextWrapping.Wrap
-                                    };
-							                                                    
-                                    ContentCanvas.Children.Add (warning_image);
-                                    Canvas.SetLeft (warning_image, 193);
-                                    Canvas.SetTop (warning_image, 100);
-							                                                    
-                                    ContentCanvas.Children.Add (warning_block);
-                                    Canvas.SetLeft (warning_block, 240);
-                                    Canvas.SetTop (warning_block, 100);
-                                }*/
 
                                 TaskbarItemInfo.ProgressValue = 0.0;
                                 TaskbarItemInfo.ProgressState = TaskbarItemProgressState.None;
@@ -819,6 +941,7 @@ namespace CmisSync
                                 Buttons.Add(open_folder_button);
                                 Buttons.Add(finish_button);
 
+                                // Actions.
 
                                 finish_button.Click += delegate
                                 {
@@ -836,181 +959,6 @@ namespace CmisSync
                                 break;
                             }
                         #endregion
-
-                        #region Page Tutorial
-                        case PageType.Tutorial:
-                            {
-                                switch (Controller.TutorialPageNumber)
-                                {
-                                    case 1:
-                                        {
-                                            Header = CmisSync.Properties.Resources.ResourceManager.GetString("WhatsNext", CultureInfo.CurrentCulture);
-                                            Description = CmisSync.Properties.Resources.ResourceManager.GetString("CmisSyncCreates", CultureInfo.CurrentCulture);
-
-
-                                            WPF.Image slide_image = new WPF.Image()
-                                            {
-                                                Width = 350,
-                                                Height = 200
-                                            };
-
-                                            slide_image.Source = UIHelpers.GetImageSource("tutorial-slide-1");
-
-                                            Button skip_tutorial_button = new Button()
-                                            {
-                                                Content = CmisSync.Properties.Resources.ResourceManager.GetString("SkipTutorial", CultureInfo.CurrentCulture)
-                                            };
-
-                                            Button continue_button = new Button()
-                                            {
-                                                Content = CmisSync.Properties.Resources.ResourceManager.GetString("Continue", CultureInfo.CurrentCulture)
-                                            };
-
-
-                                            ContentCanvas.Children.Add(slide_image);
-                                            Canvas.SetLeft(slide_image, 215);
-                                            Canvas.SetTop(slide_image, 130);
-
-                                            Buttons.Add(continue_button);
-                                            Buttons.Add(skip_tutorial_button);
-
-
-                                            skip_tutorial_button.Click += delegate
-                                            {
-                                                Controller.TutorialSkipped();
-                                            };
-
-                                            continue_button.Click += delegate
-                                            {
-                                                Controller.TutorialPageCompleted();
-                                            };
-
-                                            break;
-                                        }
-
-                                    case 2:
-                                        {
-                                            Header = CmisSync.Properties.Resources.ResourceManager.GetString("Synchronization", CultureInfo.CurrentCulture);
-                                            Description = CmisSync.Properties.Resources.ResourceManager.GetString("DocumentsAre", CultureInfo.CurrentCulture);
-
-
-                                            Button continue_button = new Button()
-                                            {
-                                                Content = CmisSync.Properties.Resources.ResourceManager.GetString("Continue", CultureInfo.CurrentCulture)
-                                            };
-
-                                            WPF.Image slide_image = new WPF.Image()
-                                            {
-                                                Width = 350,
-                                                Height = 200
-                                            };
-
-                                            slide_image.Source = UIHelpers.GetImageSource("tutorial-slide-2");
-
-
-                                            ContentCanvas.Children.Add(slide_image);
-                                            Canvas.SetLeft(slide_image, 215);
-                                            Canvas.SetTop(slide_image, 130);
-
-                                            Buttons.Add(continue_button);
-
-
-                                            continue_button.Click += delegate
-                                            {
-                                                Controller.TutorialPageCompleted();
-                                            };
-
-                                            break;
-                                        }
-
-                                    case 3:
-                                        {
-                                            Header = CmisSync.Properties.Resources.ResourceManager.GetString("StatusIcon", CultureInfo.CurrentCulture);
-                                            Description = CmisSync.Properties.Resources.ResourceManager.GetString("StatusIconShows", CultureInfo.CurrentCulture);
-
-
-                                            Button continue_button = new Button()
-                                            {
-                                                Content = CmisSync.Properties.Resources.ResourceManager.GetString("Continue", CultureInfo.CurrentCulture)
-                                            };
-
-                                            WPF.Image slide_image = new WPF.Image()
-                                            {
-                                                Width = 350,
-                                                Height = 200
-                                            };
-
-                                            slide_image.Source = UIHelpers.GetImageSource("tutorial-slide-3");
-
-
-                                            ContentCanvas.Children.Add(slide_image);
-                                            Canvas.SetLeft(slide_image, 215);
-                                            Canvas.SetTop(slide_image, 130);
-
-                                            Buttons.Add(continue_button);
-
-
-                                            continue_button.Click += delegate
-                                            {
-                                                Controller.TutorialPageCompleted();
-                                            };
-
-                                            break;
-                                        }
-
-                                    case 4:
-                                        {
-                                            Header = CmisSync.Properties.Resources.ResourceManager.GetString("AddFolders", CultureInfo.CurrentCulture);
-                                            Description = CmisSync.Properties.Resources.ResourceManager.GetString("YouCan", CultureInfo.CurrentCulture);
-
-
-                                            Button finish_button = new Button()
-                                            {
-                                                Content = CmisSync.Properties.Resources.ResourceManager.GetString("Finish", CultureInfo.CurrentCulture)
-                                            };
-
-                                            WPF.Image slide_image = new WPF.Image()
-                                            {
-                                                Width = 350,
-                                                Height = 200
-                                            };
-
-                                            slide_image.Source = UIHelpers.GetImageSource("tutorial-slide-4");
-
-                                            CheckBox check_box = new CheckBox()
-                                            {
-                                                Content = CmisSync.Properties.Resources.ResourceManager.GetString("Startup", CultureInfo.CurrentCulture),
-                                                IsChecked = true
-                                            };
-
-
-                                            ContentCanvas.Children.Add(slide_image);
-                                            Canvas.SetLeft(slide_image, 215);
-                                            Canvas.SetTop(slide_image, 130);
-
-                                            ContentCanvas.Children.Add(check_box);
-                                            Canvas.SetLeft(check_box, 185);
-                                            Canvas.SetBottom(check_box, 12);
-
-                                            Buttons.Add(finish_button);
-
-
-                                            check_box.Click += delegate
-                                            {
-                                                Controller.StartupItemChanged(check_box.IsChecked.Value);
-                                            };
-
-                                            finish_button.Click += delegate
-                                            {
-                                                Controller.TutorialPageCompleted();
-                                            };
-
-                                            break;
-                                        }
-                                }
-                                break;
-                        #endregion
-                            }
                     }
 
                     ShowAll();
@@ -1018,6 +966,37 @@ namespace CmisSync
                 });
             };
             Logger.Info("Exiting constructor.");
+        }
+    }
+
+    /// <summary>
+    /// Stores the metadata of an item in the folder selection dialog.
+    /// </summary>
+    public class SelectionTreeItem
+    {
+        /// <summary>
+        /// Whether this item's children have been loaded yet.
+        /// </summary>
+        public bool childrenLoaded = false;
+
+        /// <summary>
+        /// Address of the repository.
+        /// Only necessary for repository root nodes.
+        /// </summary>
+        public string repository;
+
+        /// <summary>
+        /// Full path to the item.
+        /// </summary>
+        public string fullPath;
+
+        /// <summary>
+        /// Constructor.
+        /// </summary>
+        public SelectionTreeItem(string repository, string fullPath)
+        {
+            this.repository = repository;
+            this.fullPath = fullPath;
         }
     }
 }
