@@ -1,0 +1,10 @@
+TestLibrary.SyncWatcherTest.TestGet0
+TestLibrary.SyncWatcherTest.TestEnableMonitorChanges
+TestLibrary.SyncWatcherTest.TestRemove
+TestLibrary.SyncWatcherTest.TestIgnore
+TestLibrary.SyncWatcherTest.TestChangeTypeCreated
+TestLibrary.SyncWatcherTest.TestChangeTypeChanged
+TestLibrary.SyncWatcherTest.TestChangeTypeDeleted
+TestLibrary.SyncWatcherTest.TestChangeTypeNone
+TestLibrary.SyncWatcherTest.TestChangeTypeForMove
+TestLibrary.SyncWatcherTest.TestChangeTypeMix
