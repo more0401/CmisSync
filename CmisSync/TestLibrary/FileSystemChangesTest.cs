@@ -25,12 +25,16 @@ namespace TestLibrary
         [TestFixtureSetUp]
         public void ClassInit()
         {
+            Directory.CreateDirectory(TestFolder);
+        }
+
+        [TestFixtureTearDown]
+        public void ClassCleanup()
+        {
             if (Directory.Exists(TestFolder))
             {
                 Directory.Delete(TestFolder, true);
             }
-            System.Threading.Thread.Sleep(100);
-            Directory.CreateDirectory(TestFolder);
         }
 
         [SetUp]
@@ -38,13 +42,13 @@ namespace TestLibrary
         {
         }
 
-        [Test]
+        [Test, Category("Fast")]
         public void TestGet0()
         {
             Assert.AreEqual(0, FileSystemChanges.Get0());
         }
 
-        [Test]
+        [Test, Category("Fast")]
         public void TestEnableMonitorChanges()
         {
             FileSystemChanges changes = new FileSystemChanges(TestFolder);
@@ -82,19 +86,19 @@ namespace TestLibrary
             Assert.AreEqual(name, changes.ChangeList[2]);
         }
 
-        [Test]
+        [Test, Category("Fast")]
         public void TestRemove()
         {
             Assert.Fail("TODO");
         }
 
-        [Test]
+        [Test, Category("Fast")]
         public void TestIgnore()
         {
             Assert.Fail("TODO");
         }
 
-        [Test]
+        [Test, Category("Fast")]
         public void TestChangeTypeCreated()
         {
             FileSystemChanges changes = new FileSystemChanges(TestFolder);
@@ -117,7 +121,7 @@ namespace TestLibrary
             }
         }
 
-        [Test]
+        [Test, Category("Slow")]
         public void TestChangeTypeCreatedHeavy()
         {
             FileSystemChanges changes = new FileSystemChanges(TestFolder);
@@ -144,7 +148,7 @@ namespace TestLibrary
             Assert.AreEqual(fileNumber, HeavyNumber);
         }
 
-        [Test]
+        [Test, Category("Fast")]
         public void TestChangeTypeChanged()
         {
             FileSystemChanges changes = new FileSystemChanges(TestFolder);
@@ -172,13 +176,13 @@ namespace TestLibrary
             }
         }
 
-        [Test]
+        [Test, Category("Slow")]
         public void TestChangeTypeChangedHeavy()
         {
             Assert.Fail("TODO");
         }
 
-        [Test]
+        [Test, Category("Fast")]
         public void TestChangeTypeDeleted()
         {
             FileSystemChanges changes = new FileSystemChanges(TestFolder);
@@ -202,13 +206,13 @@ namespace TestLibrary
             }
         }
 
-        [Test]
+        [Test, Category("Slow")]
         public void TestChangeTypeDeleteHeavy()
         {
             Assert.Fail("TODO");
         }
 
-        [Test]
+        [Test, Category("Fast")]
         public void TestChangeTypeNone()
         {
             FileSystemChanges changes = new FileSystemChanges(TestFolder);
@@ -216,7 +220,7 @@ namespace TestLibrary
             Assert.AreEqual(FileSystemChanges.ChangeTypes.None, changes.GetChangeType(GetPathname()));
         }
 
-        [Test]
+        [Test, Category("Fast")]
         public void TestChangeTypeForMove()
         {
             string oldnameOut = Path.Combine(TestFolderParent, "test.old");
@@ -265,19 +269,19 @@ namespace TestLibrary
             File.Delete(newnameOut);
         }
 
-        [Test]
+        [Test, Category("Slow")]
         public void TestChangeTypeForMoveHeavy()
         {
             Assert.Fail("TODO");
         }
 
-        [Test]
+        [Test, Category("Fast")]
         public void TestChangeTypeMix()
         {
             Assert.Fail("TODO");
         }
 
-        [Test]
+        [Test, Category("Slow")]
         public void TestChangeTypeMixHeavy()
         {
             Assert.Fail("TODO");
