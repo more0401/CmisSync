@@ -32,27 +32,43 @@ namespace CmisSync
     /// <summary>
     /// Platform-independant part of the main CmisSync controller.
     /// </summary>
-    public abstract class ControllerBase : ActivityListener
+    public abstract class ControllerBase : IActivityListener
     {
+        /// <summary>
+        /// Log.
+        /// </summary>
         protected static readonly ILog Logger = LogManager.GetLogger(typeof(ControllerBase));
+
 
         /// <summary>
         /// Whether it is the first time that CmisSync is being run.
         /// </summary>
         private bool firstRun;
 
+
+        /// <summary>
+        /// All the info about the CmisSync synchronized folder being created.
+        /// </summary>
         private RepoInfo repoInfo;
+
 
         /// <summary>
         /// Whether the reporsitories have finished loading.
         /// </summary>
         public bool RepositoriesLoaded { get; private set; }
 
+
+        /// <summary>
+        /// List of the CmisSync synchronized folders.
+        /// </summary>
         private List<RepoBase> repositories = new List<RepoBase>();
+
+
+        /// <summary>
+        /// Path where the CmisSync synchronized folders are by default.
+        /// </summary>
         public string FoldersPath { get; private set; }
 
-        public double ProgressPercentage = 0.0;
-        public string ProgressSpeed = "";
 
         public event ShowSetupWindowEventHandler ShowSetupWindowEvent = delegate { };
         public delegate void ShowSetupWindowEventHandler(PageType page_type);
@@ -61,9 +77,6 @@ namespace CmisSync
 
         public event FolderFetchedEventHandler FolderFetched = delegate { };
         public delegate void FolderFetchedEventHandler(string remote_url);
-
-        public event FolderFetchErrorHandler FolderFetchError = delegate { };
-        public delegate void FolderFetchErrorHandler(string remote_url, string[] errors);
 
         public event FolderFetchingHandler FolderFetching = delegate { };
         public delegate void FolderFetchingHandler(double percentage);
@@ -75,9 +88,6 @@ namespace CmisSync
         public event Action OnSyncing = delegate { };
         public event Action OnError = delegate { };
 
-
-        public event NotificationRaisedEventHandler NotificationRaised = delegate { };
-        public delegate void NotificationRaisedEventHandler(ChangeSet change_set);
 
         public event AlertNotificationRaisedEventHandler AlertNotificationRaised = delegate { };
         public delegate void AlertNotificationRaisedEventHandler(string title, string message);
@@ -95,6 +105,7 @@ namespace CmisSync
             }
         }
 
+
         /// <summary>
         /// Whether it is the first time that CmisSync is being run.
         /// </summary>
@@ -105,6 +116,7 @@ namespace CmisSync
                 return firstRun;
             }
         }
+
 
         /// <summary>
         /// The list of synchronized folders.
@@ -120,25 +132,12 @@ namespace CmisSync
             }
         }
 
-        public List<string> UnsyncedFolders
-        {
-            get
-            {
-                List<string> unsynced_folders = new List<string>();
-
-                foreach (RepoBase repo in Repositories)
-                {
-                    repo.SyncInBackground();
-                }
-
-                return unsynced_folders;
-            }
-        }
 
         /// <summary>
         /// Add CmisSync to the list of programs to be started up when the user logs into Windows.
         /// </summary>
         public abstract void CreateStartupItem();
+
 
         /// <summary>
         /// Add CmisSync to the user's Windows Explorer bookmarks.
@@ -155,17 +154,20 @@ namespace CmisSync
         /// <summary>
         /// Keeps track of whether a download or upload is going on, for display of the task bar animation.
         /// </summary>
-        private ActivityListener activityListenerAggregator;
+        private IActivityListener activityListenerAggregator;
+
 
         /// <summary>
         /// Component to create new CmisSync synchronized folders.
         /// </summary>
         private Fetcher fetcher;
 
+
         /// <summary>
         /// Watches the local filesystem for modifications.
         /// </summary>
         private FileSystemWatcher watcher;
+
 
         /// <summary>
         /// Concurrency locks.
@@ -259,27 +261,12 @@ namespace CmisSync
 
             repo.SyncStatusChanged += delegate(SyncStatus status)
             {
-                if (status == SyncStatus.Idle)
-                {
-                    ProgressPercentage = 0.0;
-                    ProgressSpeed = "";
-                }
-
-                UpdateState();
-            };
-
-            repo.ProgressChanged += delegate(double percentage, string speed)
-            {
-                ProgressPercentage = percentage;
-                ProgressSpeed = speed;
-
                 UpdateState();
             };
 
             this.repositories.Add(repo);
             repo.Initialize();
         }
-
 
         
         /// <summary>
@@ -352,37 +339,10 @@ namespace CmisSync
             {
                 string path = ConfigManager.CurrentConfig.FoldersPath;
 
-                // If folder has been renamed, rename it in configuration too.
-                foreach (string folder_path in Directory.GetDirectories(path))
-                {
-                    string folder_name = Path.GetFileName(folder_path);
-
-                    if (ConfigManager.CurrentConfig.GetIdentifierForFolder(folder_name) == null)
-                    {
-                        string identifier_file_path = Path.Combine(folder_path, ".CmisSync");
-
-                        if (!File.Exists(identifier_file_path))
-                            continue;
-
-                        string identifier = File.ReadAllText(identifier_file_path).Trim();
-
-                        if (ConfigManager.CurrentConfig.IdentifierExists(identifier))
-                        {
-                            RemoveRepository(folder_path);
-                            ConfigManager.CurrentConfig.RenameFolder(identifier, folder_name);
-
-                            string new_folder_path = Path.Combine(path, folder_name);
-                            AddRepository(new_folder_path);
-
-                            Logger.Info("Controller | Renamed folder with identifier " + identifier + " to '" + folder_name + "'");
-                        }
-                    }
-                }
-
                 // If folder has been deleted, remove it from configuration too.
                 foreach (string folder_name in ConfigManager.CurrentConfig.Folders)
                 {
-                    string folder_path = new Folder(folder_name).FullPath;
+                    string folder_path = ConfigManager.GetFullPath(folder_name);
 
                     if (!Directory.Exists(folder_path))
                     {
@@ -486,22 +446,10 @@ namespace CmisSync
 
             fetcher = new Fetcher(repoInfo, activityListenerAggregator);
 
-            // Actions.
-
-            this.fetcher.Finished += delegate(bool repo_is_encrypted, bool repo_is_empty, string[] warnings)
+            // Finish action.
+            this.fetcher.Finished += delegate()
             {
                 FinishFetcher();
-            };
-
-            this.fetcher.Failed += delegate
-            {
-                FolderFetchError(this.fetcher.RemoteUrl.ToString(), this.fetcher.GetErrors());
-                StopFetcher();
-            };
-
-            this.fetcher.ProgressChanged += delegate(double percentage)
-            {
-                FolderFetching(percentage);
             };
 
             this.FinishFetcher();
@@ -528,6 +476,7 @@ namespace CmisSync
                 }
             }
 
+            this.fetcher.Dispose();
             this.fetcher = null;
         }
 
@@ -546,6 +495,7 @@ namespace CmisSync
             AddRepository(repoInfo.TargetDirectory);
             FolderListChanged();
 
+            this.fetcher.Dispose();
             this.fetcher = null;
         }
 

@@ -119,7 +119,6 @@ namespace CmisSync
 
                 try
                 {
-                    File.Create(ini_file_path).Close();
                     File.WriteAllText(ini_file_path, ini_file);
 
                     File.SetAttributes(ini_file_path,
@@ -153,7 +152,7 @@ namespace CmisSync
         /// <param name="name">Name of the synchronized folder</param>
         public void OpenCmisSyncFolder(string name)
         {
-            Utils.OpenFolder(new Folder(name).FullPath);
+            Utils.OpenFolder(ConfigManager.GetFullPath(name));
         }
 
         /// <summary>

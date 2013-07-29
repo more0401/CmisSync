@@ -111,7 +111,7 @@ namespace CmisSync {
             Label version = new Label () {
                 Content    = "version " + Controller.RunningVersion,
                 FontSize   = 11,
-                Foreground = new SolidColorBrush (Colors.White)
+                Foreground = new SolidColorBrush (Color.FromRgb (135, 178, 227))
             };
 
             this.updates = new Label () {
@@ -122,8 +122,8 @@ namespace CmisSync {
             
             TextBlock credits = new TextBlock () {
                 FontSize     = 11,
-                Foreground   = new SolidColorBrush (Colors.White),
-                Text         = "Copyright © 2010–" + DateTime.Now.Year + " Aegif and others.\n" +
+                Foreground = new SolidColorBrush (Color.FromRgb (135, 178, 227)),
+                Text         = "Copyright © 2010–" + DateTime.Now.Year.ToString() + " Aegif and others.\n" +
                     "\n" +
                     "CmisSync is Open Source software. You are free to use, modify, " +
                     "and redistribute it under the GNU General Public License version 3 or later.",

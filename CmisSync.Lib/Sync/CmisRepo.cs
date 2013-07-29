@@ -21,14 +21,45 @@ namespace CmisSync.Lib.Sync
 
     public partial class CmisRepo : RepoBase
     {
+        /// <summary>
+        /// Remote folder to synchronize.
+        /// </summary>
         private SynchronizedFolder synchronizedFolder;
 
-        public CmisRepo(RepoInfo repoInfo, ActivityListener activityListener)
+
+        /// <summary>
+        /// Track whether <c>Dispose</c> has been called.
+        /// </summary>
+        private bool disposed = false;
+
+
+        /// <summary>
+        /// Constructor.
+        /// </summary>
+        public CmisRepo(RepoInfo repoInfo, IActivityListener activityListener)
             : base(repoInfo)
         {
-            synchronizedFolder = new SynchronizedFolder(repoInfo, activityListener, this);
+            this.synchronizedFolder = new SynchronizedFolder(repoInfo, activityListener, this);
             Logger.Info(synchronizedFolder);
         }
+
+
+        /// <summary>
+        /// Dispose pattern implementation.
+        /// </summary>
+        protected override void Dispose(bool disposing)
+        {
+            if (!this.disposed)
+            {
+                if (disposing)
+                {
+                    this.synchronizedFolder.Dispose();
+                }
+                this.disposed = true;
+            }
+            base.Dispose(disposing);
+        }
+
 
         /// <summary>
         /// Sync for the first time.
@@ -36,9 +67,11 @@ namespace CmisSync.Lib.Sync
         /// </summary>
         public void DoFirstSync()
         {
-            Logger.Info(String.Format("First sync {0}", this.Name));
-            if (synchronizedFolder != null)
-                synchronizedFolder.Sync();
+            Logger.Info("First sync of " + this.Name);
+            if (this.synchronizedFolder != null)
+            {
+                this.synchronizedFolder.Sync();
+            }
         }
 
         /// <summary>
@@ -47,13 +80,13 @@ namespace CmisSync.Lib.Sync
         /// </summary>
         public override void SyncInBackground()
         {
-            if (synchronizedFolder != null) // Because it is sometimes called before the object's constructor has completed.
-                synchronizedFolder.SyncInBackground();
+            if (this.synchronizedFolder != null) // Because it is sometimes called before the object's constructor has completed.
+                this.synchronizedFolder.SyncInBackground();
         }
 
         /// <summary>
-        /// Size of the repository in bytes.
-        /// Obtained by adding the individual sizes of all files.
+        /// Size of the synchronized folder in bytes.
+        /// Obtained by adding the individual sizes of all files, recursively.
         /// </summary>
         public override double Size
         {

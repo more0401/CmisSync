@@ -25,6 +25,8 @@ using log4net.Config;
 using CmisSync.Lib.Sync;
 using System.Net;
 
+[assembly: CLSCompliant(true)]
+
 namespace CmisSync
 {
     // The CmisSync main class.
@@ -50,13 +52,10 @@ namespace CmisSync
         /// </summary>
         private static readonly ILog Logger = LogManager.GetLogger(typeof(Program));
 
-        // Single-threaded apartment on Windows.
-#if !__MonoCS__
+        //
+        // Main method for CmisSync.
+        //
         [STAThread]
-#endif
-        /// <summary>
-        /// Main method for CmisSync.
-        /// </summary>
         public static void Main(string[] args)
         {
             bool firstRun = ! File.Exists(ConfigManager.CurrentConfigFile);
@@ -122,10 +121,10 @@ namespace CmisSync
             }
 
 #if !__MonoCS__
-                // Suppress assertion messages in debug mode
-                GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced);
-                GC.WaitForPendingFinalizers();
+            //// Suppress assertion messages in debug mode
+            //GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced);
+            //GC.WaitForPendingFinalizers();
 #endif
-            }
+        }
     }
 }

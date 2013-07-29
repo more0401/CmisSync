@@ -16,52 +16,55 @@ using System.Net;
 
 namespace CmisSync.Lib.Sync
 {
+    /// <summary>
+    /// Part of CmisRepo.
+    /// </summary>
     public partial class CmisRepo : RepoBase
     {
-        /**
-         * Synchronization with a particular CMIS folder.
-         */
+        /// <summary>
+        /// Synchronization with a particular CMIS folder.
+        /// </summary>
         public partial class SynchronizedFolder
         {
-            /**
-             * Synchronize by checking all folders/files one-by-one.
-             * This strategy is used if the CMIS server does not support the ChangeLog feature.
-             * 
-             * for all remote folders:
-             *     if exists locally:
-             *       recurse
-             *     else
-             *       if in database:
-             *         delete recursively from server // if BIDIRECTIONAL
-             *       else
-             *         download recursively
-             * for all remote files:
-             *     if exists locally:
-             *       if remote is more recent than local:
-             *         download
-             *       else
-             *         upload                         // if BIDIRECTIONAL
-             *     else:
-             *       if in database:
-             *         delete from server             // if BIDIRECTIONAL
-             *       else
-             *         download
-             * for all local files:
-             *   if not present remotely:
-             *     if in database:
-             *       delete
-             *     else:
-             *       upload                           // if BIDIRECTIONAL
-             *   else:
-             *     if has changed locally:
-             *       upload                           // if BIDIRECTIONAL
-             * for all local folders:
-             *   if not present remotely:
-             *     if in database:
-             *       delete recursively from local
-             *     else:
-             *       upload recursively               // if BIDIRECTIONAL
-             */
+            /// <summary>
+            /// Synchronize by checking all folders/files one-by-one.
+            /// This strategy is used if the CMIS server does not support the ChangeLog feature.
+            /// 
+            /// for all remote folders:
+            ///     if exists locally:
+            ///       recurse
+            ///     else
+            ///       if in database:
+            ///         delete recursively from server // if BIDIRECTIONAL
+            ///       else
+            ///         download recursively
+            /// for all remote files:
+            ///     if exists locally:
+            ///       if remote is more recent than local:
+            ///         download
+            ///       else
+            ///         upload                         // if BIDIRECTIONAL
+            ///     else:
+            ///       if in database:
+            ///         delete from server             // if BIDIRECTIONAL
+            ///       else
+            ///         download
+            /// for all local files:
+            ///   if not present remotely:
+            ///     if in database:
+            ///       delete
+            ///     else:
+            ///       upload                           // if BIDIRECTIONAL
+            ///   else:
+            ///     if has changed locally:
+            ///       upload                           // if BIDIRECTIONAL
+            /// for all local folders:
+            ///   if not present remotely:
+            ///     if in database:
+            ///       delete recursively from local
+            ///     else:
+            ///       upload recursively               // if BIDIRECTIONAL
+            /// </summary>
             private void CrawlSync(IFolder remoteFolder, string localFolder)
             {
                 while (repo.Status == SyncStatus.Suspend)
@@ -87,18 +90,19 @@ namespace CmisSync.Lib.Sync
                 CrawlLocalFolders(localFolder, remoteFolder, remoteSubfolders);
             }
 
-            /**
-             * Crawl remote content, syncing down if needed.
-             * Meanwhile, cache remoteFiles and remoteFolders, they are output parameters that are used in CrawlLocalFiles/CrawlLocalFolders
-             */
+
+            /// <summary>
+            /// Crawl remote content, syncing down if needed.
+            /// Meanwhile, cache remoteFiles and remoteFolders, they are output parameters that are used in CrawlLocalFiles/CrawlLocalFolders
+            /// </summary>
             private void CrawlRemote(IFolder remoteFolder, string localFolder, IList remoteFiles, IList remoteFolders)
             {
                 foreach (ICmisObject cmisObject in remoteFolder.GetChildren())
                 {
                     while (repo.Status == SyncStatus.Suspend)
                     {
-                        Logger.Info(String.Format("Sync of {0} is suspend, next retry in {1}ms", repoinfo.Name, repoinfo.PollInterval));
-                        System.Threading.Thread.Sleep((int)repoinfo.PollInterval);
+                        Logger.Info("Sync of " + repoinfo.Name + " is suspended, will retry in " + repoinfo.PollInterval + "ms");
+                        System.Threading.Thread.Sleep((int)repoinfo.PollInterval); // TODO Should not sleep, but skip instead.
                     }
 
                     #region Cmis Folder
@@ -106,9 +110,9 @@ namespace CmisSync.Lib.Sync
                     {
                         // It is a CMIS folder.
                         IFolder remoteSubFolder = (IFolder)cmisObject;
-                        if (Utils.WorthSyncing(remoteSubFolder.Name))
+                        if (Utils.WorthSyncing(remoteSubFolder.Name) && !repoinfo.isPathIgnored(remoteSubFolder.Path))
                         {
-                            Logger.Debug("CrawlRemote dir: " + localFolder + Path.DirectorySeparatorChar.ToString() + remoteSubFolder.Name);
+                            //Logger.Debug("CrawlRemote dir: " + localFolder + Path.DirectorySeparatorChar.ToString() + remoteSubFolder.Name);
                             remoteFolders.Add(remoteSubFolder.Name);
                             string localSubFolder = localFolder + Path.DirectorySeparatorChar.ToString() + remoteSubFolder.Name;
 
@@ -147,6 +151,10 @@ namespace CmisSync.Lib.Sync
                                     {
                                         Logger.Info("Skipping download of folder with illegal name: " + remoteSubFolder.Name);
                                     }
+                                    else if (repoinfo.isPathIgnored(remoteSubFolder.Path))
+                                    {
+                                        Logger.Info("Skipping dowload of ignored folder: " + remoteSubFolder.Name);
+                                    }
                                     else
                                     {
                                         // Create local folder.remoteDocument.Name
@@ -178,7 +186,7 @@ namespace CmisSync.Lib.Sync
                             // For instance in FileNet it is not usual to have a document where
                             // document.Name is "foo" and document.ContentStreamFileName is "foo.jpg".
                             string remoteDocumentFileName = remoteDocument.ContentStreamFileName;
-                            Logger.Debug("CrawlRemote doc: " + localFolder + Path.DirectorySeparatorChar.ToString() + remoteDocumentFileName);
+                            //Logger.Debug("CrawlRemote doc: " + localFolder + Path.DirectorySeparatorChar.ToString() + remoteDocumentFileName);
 
                             // Check if file extension is allowed
 
@@ -262,12 +270,24 @@ namespace CmisSync.Lib.Sync
                 }
             }
 
-            /**
-             * Crawl local files in a given directory (not recursive).
-             */
+
+            /// <summary>
+            /// Crawl local files in a given directory (not recursive).
+            /// </summary>
             private void CrawlLocalFiles(string localFolder, IFolder remoteFolder, IList remoteFiles)
             {
-                foreach (string filePath in Directory.GetFiles(localFolder))
+                string[] files;
+                try
+                {
+                    files = Directory.GetFiles(localFolder);
+                }
+                catch (Exception e)
+                {
+                    Logger.Warn(String.Format("Exception while get the file list from folder {0}: {1}", localFolder, Utils.ToLogString(e)));
+                    return;
+                }
+
+                foreach (string filePath in files)
                 {
                     while (repo.Status == SyncStatus.Suspend)
                     {
@@ -325,20 +345,33 @@ namespace CmisSync.Lib.Sync
                 }
             }
 
-            /**
-             * Crawl local folders in a given directory (not recursive).
-             */
+
+            /// <summary>
+            /// Crawl local folders in a given directory (not recursive).
+            /// </summary>
             private void CrawlLocalFolders(string localFolder, IFolder remoteFolder, IList remoteFolders)
             {
-                foreach (string localSubFolder in Directory.GetDirectories(localFolder))
+                string[] folders;
+                try
+                {
+                    folders = Directory.GetDirectories(localFolder);
+                }
+                catch (Exception e)
+                {
+                    Logger.Warn(String.Format("Exception while get the folder list from folder {0}: {1}", localFolder, Utils.ToLogString(e)));
+                    return;
+                }
+
+                foreach (string localSubFolder in folders)
                 {
                     while (repo.Status == SyncStatus.Suspend)
                     {
                         Logger.Info(String.Format("Sync of {0} is suspend, next retry in {1}ms", repoinfo.Name, repoinfo.PollInterval));
                         System.Threading.Thread.Sleep((int)repoinfo.PollInterval);
                     }
-
-                    if (Utils.WorthSyncing(localSubFolder))
+                    string path = Path.Combine(localFolder, localSubFolder).ToString().Substring(repoinfo.TargetDirectory.Length);
+                    path = path.Replace("\\", "/");
+                    if (Utils.WorthSyncing(localSubFolder) && !repoinfo.isPathIgnored(path))
                     {
                         string folderName = Path.GetFileName(localSubFolder);
                         if (!remoteFolders.Contains(folderName))

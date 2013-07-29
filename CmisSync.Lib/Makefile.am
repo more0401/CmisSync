@@ -6,7 +6,7 @@ ASSEMBLY_INFO_SOURCE = Defines.cs
 LIBS = $(LOG4NET_LIBS) $(DATALIBS) $(JSON_LIBS) $(DOTCMISLIBS) $(WEBLIBS) $(MONOPOSIX)
 
 SOURCES =  \
-	ActivityListener.cs \
+	IActivityListener.cs \
 	ActivityListenerAggregator.cs \
 	Backend.cs \
 	Cmis/CmisPermissionDeniedException.cs \
@@ -18,7 +18,6 @@ SOURCES =  \
 	Config.cs \
 	ConfigManager.cs \
 	ConfigMigration.cs \
-	Exceptions.cs \
 	Fetcher.cs \
 	RepoBase.cs \
 	RepoInfo.cs \
@@ -28,8 +27,7 @@ SOURCES =  \
 	Sync/SynchronizedFolder.cs \
 	Sync/FileSystemChanges.cs \
 	Utils.cs \
-	Watcher.cs \
-	Wrappers.cs
+	Watcher.cs
 
 EXTRA_DIST = CmisSync.Lib.csproj StaticDefines.cs
 

@@ -5,10 +5,42 @@ using System.Text;
 
 namespace CmisSync.Lib
 {
+    /// <summary>
+    /// A static class that allows easy access to the configuration of CmisSync.
+    /// </summary>
     public static class ConfigManager
     {
+        /// <summary>
+        /// The CmisSync configuration.
+        /// Following the singleton design pattern.
+        /// </summary>
         private static Config config;
 
+
+        /// <summary>
+        /// The CmisSync configuration.
+        /// Following the singleton design pattern.
+        /// </summary>
+        public static Config CurrentConfig
+        {
+            get
+            {
+                // Load the configuration if it has not been done yet.
+                // If no configuration file exists, it will create a default one.
+                if (config == null)
+                {
+                    config = new Config(CurrentConfigFile);
+                }
+
+                // return the loaded configuration.
+                return config;
+            }
+        }
+
+
+        /// <summary>
+        /// Get the filesystem path to the XML configuration file.
+        /// </summary>
         public static string CurrentConfigFile
         {
             get
@@ -17,13 +49,17 @@ namespace CmisSync.Lib
             }
         }
 
-        public static Config CurrentConfig
+
+        public static string GetFullPath(string name)
         {
-            get
-            {
-                if (config == null) config = new Config(CurrentConfigFile);
-                return config;
+                string custom_path = ConfigManager.CurrentConfig.GetFolderAttribute(name, "path");
+                // if (String.IsNullOrEmpty(custom_path)) custom_path = Config.DefaultConfig.FoldersPath;
+
+                if (custom_path != null)
+                    return custom_path;
+                else
+                    return Path.Combine(ConfigManager.CurrentConfig.FoldersPath, name);
+                // return Path.Combine(ROOT_FOLDER, Name);
             }
-        }
     }
 }

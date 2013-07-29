@@ -28,82 +28,132 @@ using Timers = System.Timers;
 namespace CmisSync.Lib
 {
 
-    public enum SyncStatus
+    /// <summary>
+    /// Synchronizes a remote folder.
+    /// This class contains the loop that synchronizes every X seconds.
+    /// </summary>
+    public abstract class RepoBase : IDisposable
     {
-        Idle,
-        SyncUp,
-        SyncDown,
-        Error,
-        Suspend
-    }
-
-
-    public abstract class RepoBase
-    {
+        /// <summary>
+        /// Log.
+        /// </summary>
         private static readonly ILog Logger = LogManager.GetLogger(typeof(RepoBase));
 
+
+        /// <summary>
+        /// Perform a synchronization if one is not running already.
+        /// </summary>
         public abstract void SyncInBackground();
+
+
+        /// <summary>
+        /// Local disk size taken by the repository.
+        /// </summary>
         public abstract double Size { get; }
 
-        /**
-         * <param>new <c>SyncStatus</c> value</param>
-         */
+
+        /// <summary>
+        /// Affect a new <c>SyncStatus</c> value.
+        /// </summary>
         public Action<SyncStatus> SyncStatusChanged { get; set; }
 
-        /**
-         * <param>percentage</param>
-         * <param>speed</param>
-         */
-        public Action<double, string> ProgressChanged { get; set; }
 
-        /**
-         * <param><c>ChangeSet</c> value</param>
-         */
-        public Action<ChangeSet> NewChangeSet { get; set; }
-
-        public Action ConflictResolved { get; set; }
+        /// <summary>
+        /// Local changes have been detected.
+        /// </summary>
         public Action ChangesDetected { get; set; }
 
 
+        /// <summary>
+        /// Path of the local synchronized folder.
+        /// </summary>
         public readonly string LocalPath;
+
+
+        /// <summary>
+        /// Name of the synchronized folder, as found in the CmisSync XML configuration file.
+        /// </summary>
         public readonly string Name;
+
+
+        /// <summary>
+        /// URL of the remote CMIS endpoint.
+        /// </summary>
         public readonly Uri RemoteUrl;
+
+
+        /// <summary>
+        /// Current status of the synchronization (paused or not).
+        /// </summary>
         public SyncStatus Status { get; private set; }
 
 
-        //public virtual string[] UnsyncedFilePaths
-        //{
-        //    get
-        //    {
-        //        return new string[0];
-        //    }
-        //}
-
-        public void Resume()
-        {
-            Status = SyncStatus.Idle;
-        }
-
+        /// <summary>
+        /// Stop syncing momentarily.
+        /// </summary>
         public void Suspend()
         {
             Status = SyncStatus.Suspend;
         }
 
-        protected RepoInfo RepoInfo { get; set; }
-
-
-        private Watcher watcher;
-        private TimeSpan poll_interval = PollInterval.Short;
-        private DateTime last_poll = DateTime.Now;
-        private Timers.Timer remote_timer = new Timers.Timer();
-
-        private static class PollInterval
+        /// <summary>
+        /// Restart syncing.
+        /// </summary>
+        public void Resume()
         {
-            public static readonly TimeSpan Short = new TimeSpan(0, 0, 5, 0);
-            public static readonly TimeSpan Long = new TimeSpan(0, 0, 15, 0);
+            Status = SyncStatus.Idle;
         }
 
 
+        /// <summary>
+        /// Return the synchronized folder's information.
+        /// </summary>
+        protected RepoInfo RepoInfo { get; set; }
+
+
+        /// <summary>
+        /// Watches the local filesystem for changes.
+        /// </summary>
+        private Watcher watcher;
+
+
+        /// <summary>
+        /// Interval at which the local and remote filesystems should be polled.
+        /// </summary>
+        private TimeSpan poll_interval = PollInterval.Short;
+
+
+        /// <summary>
+        /// When the local and remote filesystems were last checked for modifications.
+        /// </summary>
+        private DateTime last_poll = DateTime.Now;
+
+
+        /// <summary>
+        /// Timer for watching the local and remote filesystems.
+        /// </summary>
+        private Timers.Timer remote_timer = new Timers.Timer();
+
+
+        /// <summary>
+        /// Intervals for local and remote filesystems polling.
+        /// Currently the polling interval is fixed.
+        /// </summary>
+        private static class PollInterval
+        {
+            public static readonly TimeSpan Short = new TimeSpan(0, 0, 5, 0);
+        }
+
+
+        /// <summary>
+        /// Track whether <c>Dispose</c> has been called.
+        /// </summary>
+        private bool disposed = false;
+
+
+        /// <summary>
+        /// Constructor.
+        /// </summary>
         public RepoBase(RepoInfo repoInfo)
         {
             RepoInfo = repoInfo;
@@ -111,7 +161,7 @@ namespace CmisSync.Lib
             Name = Path.GetFileName(LocalPath);
             RemoteUrl = repoInfo.Address;
 
-            Logger.Info(String.Format("Repo [{0}] - Set poll interval to {1} ms", repoInfo.Name, repoInfo.PollInterval));
+            Logger.Info("Repo " + repoInfo.Name + " - Set poll interval to " + repoInfo.PollInterval + "ms");
             this.remote_timer.Interval = repoInfo.PollInterval;
 
             SyncStatusChanged += delegate(SyncStatus status)
@@ -121,6 +171,7 @@ namespace CmisSync.Lib
 
             this.watcher = new Watcher(LocalPath);
 
+            // Main loop syncing every X seconds.
             this.remote_timer.Elapsed += delegate
             {
                 int time_comparison = DateTime.Compare(this.last_poll, DateTime.Now.Subtract(this.poll_interval));
@@ -131,13 +182,54 @@ namespace CmisSync.Lib
                     this.last_poll = DateTime.Now;
                 }
 
-                // In the unlikely case that we haven't synced up our
-                // changes or the server was down, sync up again
+                // Synchronize.
                 SyncInBackground();
             };
+            
+            ChangesDetected += delegate { };
         }
 
 
+        /// <summary>
+        /// Destructor.
+        /// </summary>
+        ~RepoBase()
+        {
+            Dispose(false);
+        }
+
+
+        /// <summary>
+        /// Implement IDisposable interface. 
+        /// </summary>
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+
+        /// <summary>
+        /// Dispose pattern implementation.
+        /// </summary>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!this.disposed)
+            {
+                if (disposing)
+                {
+                    this.remote_timer.Stop();
+                    this.remote_timer.Dispose();
+                    this.watcher.Dispose();
+                }
+                this.disposed = true;
+            }
+        }
+
+
+        /// <summary>
+        /// Initialize the watcher.
+        /// </summary>
         public void Initialize()
         {
             this.watcher.ChangeEvent += OnFileActivity;
@@ -150,10 +242,12 @@ namespace CmisSync.Lib
         }
 
 
+        /// <summary>
+        /// Some file activity has been detected, sync changes.
+        /// </summary>
         public void OnFileActivity(object sender, FileSystemEventArgs args)
         {
             ChangesDetected();
-            //string relative_path = args.FullPath.Replace(LocalPath, "");
 
             this.watcher.Disable();
             // TODO
@@ -161,13 +255,18 @@ namespace CmisSync.Lib
         }
 
 
+        /// <summary>
+        /// A conflict has been resolved.
+        /// </summary>
         protected internal void OnConflictResolved()
         {
-            ConflictResolved();
+            // ConflictResolved(); TODO
         }
 
 
-        // Recursively gets a folder's size in bytes
+        /// <summary>
+        /// Recursively gets a folder's size in bytes.
+        /// </summary>
         private double CalculateSize(DirectoryInfo parent)
         {
             if (!Directory.Exists(parent.ToString()))
@@ -177,6 +276,7 @@ namespace CmisSync.Lib
 
             try
             {
+                // All files at this level.
                 foreach (FileInfo file in parent.GetFiles())
                 {
                     if (!file.Exists)
@@ -185,6 +285,7 @@ namespace CmisSync.Lib
                     size += file.Length;
                 }
 
+                // Recurse.
                 foreach (DirectoryInfo directory in parent.GetDirectories())
                     size += CalculateSize(directory);
 
@@ -196,14 +297,24 @@ namespace CmisSync.Lib
 
             return size;
         }
+    }
 
 
-        public void Dispose()
-        {
-            this.remote_timer.Stop();
-            this.remote_timer.Dispose();
+    /// <summary>
+    /// Current status of the synchronization.
+    /// TODO: It was used in SparkleShare for up/down/error but is not useful anymore, should be removed.
+    /// </summary>
+    public enum SyncStatus
+    {
+        /// <summary>
+        /// Normal operation.
+        /// </summary>
+        Idle,
 
-            this.watcher.Dispose();
-        }
+        /// <summary>
+        /// Synchronization is suspended.
+        /// TODO this should be written in XML configuration instead.
+        /// </summary>
+        Suspend
     }
 }
