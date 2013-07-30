@@ -26,7 +26,8 @@ namespace CmisSync.Lib
     /// <summary>
     /// Watches the local filesystem for changes.
     /// </summary>
-    public class Watcher : FileSystemWatcher {
+    public class Watcher : FileSystemWatcher
+    {
 
         /// <summary>
         /// thread lock for <c>changeList</c> and <c>changes</c>
@@ -120,6 +121,7 @@ namespace CmisSync.Lib
             Renamed += new RenamedEventHandler(OnRenamed);
 
             EnableRaisingEvents = false;
+            EnableEvent = false;
         }
 
 
@@ -128,6 +130,7 @@ namespace CmisSync.Lib
             List<ChangeTypes> checks = new List<ChangeTypes>();
             checks.Add(ChangeTypes.Deleted);
             ChangeHandle(e.FullPath, ChangeTypes.Created, checks);
+            InvokeChangeEvent(e);
         }
 
         
@@ -137,6 +140,7 @@ namespace CmisSync.Lib
             checks.Add(ChangeTypes.Created);
             checks.Add(ChangeTypes.Changed);
             ChangeHandle(e.FullPath, ChangeTypes.Deleted, checks);
+            InvokeChangeEvent(e);
         }
 
         
@@ -146,6 +150,7 @@ namespace CmisSync.Lib
             checks.Add(ChangeTypes.Created);
             checks.Add(ChangeTypes.Changed);
             ChangeHandle(e.FullPath, ChangeTypes.Changed, checks);
+            InvokeChangeEvent(e);
         }
 
         
@@ -186,6 +191,7 @@ namespace CmisSync.Lib
                     System.IO.Path.GetFileName(newname));
                 OnCreated(source, eventCreate);
             }
+            InvokeChangeEvent(e);
         }
 
         
@@ -242,10 +248,17 @@ namespace CmisSync.Lib
         /// </summary>
         public event EventHandler<FileSystemEventArgs> ChangeEvent;
 
-
         /// <summary>
         /// Whether to enable <c>ChangeEvent</c>
         /// </summary>
         public bool EnableEvent { get; set; }
+
+        private void InvokeChangeEvent(FileSystemEventArgs args)
+        {
+            if (EnableEvent)
+            {
+                ChangeEvent(this, args);
+            }
+        }
     }
 }
