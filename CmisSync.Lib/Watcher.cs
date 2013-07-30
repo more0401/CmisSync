@@ -16,7 +16,10 @@
 
 
 using System;
+using System.Diagnostics;
 using System.IO;
+using System.Collections.Generic;
+
 
 namespace CmisSync.Lib
 {
@@ -26,46 +29,195 @@ namespace CmisSync.Lib
     public class Watcher : FileSystemWatcher {
 
         /// <summary>
-        /// Event when a local file has changed.
+        /// thread lock for <c>changeList</c> and <c>changes</c>
         /// </summary>
-        public event EventHandler<FileSystemEventArgs> ChangeEvent;
+        private Object changeLock = new Object();
+
+        /// <summary>
+        /// the file/folder pathname (relative to <c>Path</c>) list for changes
+        /// </summary>
+        private List<string> changeList = new List<string>();
+
+        /// <summary>
+        /// supported change type
+        /// rename a file: <c>Deleted</c> for the old name, and <c>Created</c> for the new name
+        /// </summary>
+        public enum ChangeTypes
+        {
+            /// <summary>
+            /// no change for the file/folder
+            /// </summary>
+            None,
+
+            /// <summary>
+            /// a new file/folder is created
+            /// </summary>
+            Created,
+
+            /// <summary>
+            /// the content for the file is changed
+            /// </summary>
+            Changed,
+
+            /// <summary>
+            /// the file/folder is deleted
+            /// </summary>
+            Deleted
+        };
+
+        /// <summary>
+        /// key is the element in <c>changeList</c>
+        /// </summary>
+        private Dictionary<string, ChangeTypes> changes = new Dictionary<string, ChangeTypes>();
 
 
         /// <summary>
-        /// Lock used when modifying EnableRaisingEvents.
+        /// <returns>the file/folder pathname (relative to <c>Path</c>) list for changes</returns>
         /// </summary>
-        private Object thread_lock = new Object ();
+        public List<string> GetChangeList()
+        {
+            lock (changeLock)
+            {
+                return new List<string>(changeList);
+            }
+        }
 
 
         /// <summary>
-        /// Whether this object has been disposed or not.
+        /// <returns><c>ChangeTypes</c> for the file/folder <param>name</param></returns>
         /// </summary>
-        private bool disposed;
+        public ChangeTypes GetChangeType(string name)
+        {
+            lock (changeLock)
+            {
+                ChangeTypes type;
+                if (changes.TryGetValue(name, out type))
+                {
+                    return type;
+                }
+                else
+                {
+                    return ChangeTypes.None;
+                }
+            }
+        }
 
 
         /// <summary>
         /// Constructor.
         /// </summary>
-        public Watcher (string path) : base (path)
+        public Watcher(string folder)
         {
+            Path = System.IO.Path.GetFullPath(folder);
             IncludeSubdirectories = true;
-            EnableRaisingEvents   = true;
             Filter                = "*";
+            InternalBufferSize = 4 * 1024 * 16;
 
-            Changed += OnChanged;
-            Created += OnChanged;
-            Deleted += OnChanged;
-            Renamed += OnChanged;
+            Error += new ErrorEventHandler(OnError);
+            Created += new FileSystemEventHandler(OnCreated);
+            Deleted += new FileSystemEventHandler(OnDeleted);
+            Changed += new FileSystemEventHandler(OnChanged);
+            Renamed += new RenamedEventHandler(OnRenamed);
+
+            EnableRaisingEvents = false;
         }
 
 
-        /// <summary>
-        /// A local modification has happened.
-        /// </summary>
-        private void OnChanged (object sender, FileSystemEventArgs args)
+        private void OnCreated(object source, FileSystemEventArgs e)
         {
-            // Disabled for now. ChangeEvent(sender, args);
+            List<ChangeTypes> checks = new List<ChangeTypes>();
+            checks.Add(ChangeTypes.Deleted);
+            ChangeHandle(e.FullPath, ChangeTypes.Created, checks);
         }
+
+        
+        private void OnDeleted(object source, FileSystemEventArgs e)
+        {
+            List<ChangeTypes> checks = new List<ChangeTypes>();
+            checks.Add(ChangeTypes.Created);
+            checks.Add(ChangeTypes.Changed);
+            ChangeHandle(e.FullPath, ChangeTypes.Deleted, checks);
+        }
+
+        
+        private void OnChanged(object source, FileSystemEventArgs e)
+        {
+            List<ChangeTypes> checks = new List<ChangeTypes>();
+            checks.Add(ChangeTypes.Created);
+            checks.Add(ChangeTypes.Changed);
+            ChangeHandle(e.FullPath, ChangeTypes.Changed, checks);
+        }
+
+        
+        private void ChangeHandle(string name, ChangeTypes type, List<ChangeTypes> checks)
+        {
+            lock (changeLock)
+            {
+                Debug.Assert(name.StartsWith(Path));
+                ChangeTypes oldType;
+                if (changes.TryGetValue(name, out oldType))
+                {
+                    Debug.Assert(checks.Contains(oldType));
+                    changeList.Remove(name);
+                }
+                changeList.Add(name);
+                changes[name] = type;
+            }
+        }
+
+        
+        private void OnRenamed(object source, RenamedEventArgs e)
+        {
+            string oldname = e.OldFullPath;
+            string newname = e.FullPath;
+            if (oldname.StartsWith(Path))
+            {
+                FileSystemEventArgs eventDelete = new FileSystemEventArgs(
+                    WatcherChangeTypes.Deleted,
+                    System.IO.Path.GetDirectoryName(oldname),
+                    System.IO.Path.GetFileName(oldname));
+                OnDeleted(source, eventDelete);
+            }
+            if (newname.StartsWith(Path))
+            {
+                FileSystemEventArgs eventCreate = new FileSystemEventArgs(
+                    WatcherChangeTypes.Created,
+                    System.IO.Path.GetDirectoryName(newname),
+                    System.IO.Path.GetFileName(newname));
+                OnCreated(source, eventCreate);
+            }
+        }
+
+        
+        private void OnError(object source, ErrorEventArgs e)
+        {
+            Debug.Assert(false);
+            //TODO
+        }
+
+        
+        public void RemoveChange(string name)
+        {
+            //TODO
+        }
+
+        
+        public void RemoveAll()
+        {
+            //TODO
+        }
+
+        
+        public void IgnoreChangeType(string name, ChangeTypes type)
+        {
+            //TODO
+        }
+
+        
+        /// <summary>
+        /// Whether this object has been disposed or not.
+        /// </summary>
+        private bool disposed;
 
 
         /// <summary>
@@ -86,30 +238,14 @@ namespace CmisSync.Lib
 
 
         /// <summary>
-        /// Enable the watcher.
+        /// Event when a local file has changed
         /// </summary>
-        public void Enable ()
-        {
-            if (disposed)
-            {
-                throw new ObjectDisposedException(GetType().Name);
-            }
-            lock (this.thread_lock)
-                EnableRaisingEvents = true;
-        }
+        public event EventHandler<FileSystemEventArgs> ChangeEvent;
 
 
         /// <summary>
-        /// Disable the watcher.
+        /// Whether to enable <c>ChangeEvent</c>
         /// </summary>
-        public void Disable ()
-        {
-            if (disposed)
-            {
-                throw new ObjectDisposedException(GetType().Name);
-            }
-            lock (this.thread_lock)
-                EnableRaisingEvents = false;
-        }
+        public bool EnableEvent { get; set; }
     }
 }

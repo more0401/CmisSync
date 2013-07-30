@@ -59,6 +59,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CmisSyncTests.cs" />
+    <Compile Include="SyncWatcherTest.cs" />
     <Compile Include="LocalFilesystemActivityGenerator.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

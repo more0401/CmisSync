@@ -249,9 +249,9 @@ namespace CmisSync.Lib
         {
             ChangesDetected();
 
-            this.watcher.Disable();
+            this.watcher.EnableEvent = false;
             // TODO
-            this.watcher.Enable();
+            this.watcher.EnableEvent = true;
         }
 
 
