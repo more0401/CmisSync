@@ -105,6 +105,40 @@ namespace CmisSync.Lib
 
 
         /// <summary>
+        /// remove the file/folder from changes
+        /// </summary>
+        public void RemoveChange(string name)
+        {
+            lock (changeLock)
+            {
+                if (changes.Remove(name))
+                {
+                    changeList.Remove(name);
+                }
+            }
+        }
+
+
+        /// <summary>
+        /// remove all from changes
+        /// </summary>
+        public void RemoveAll()
+        {
+            lock (changeLock)
+            {
+                changes.Clear();
+                changeList.Clear();
+            }
+        }
+
+
+        public void IgnoreChangeType(string name, ChangeTypes type)
+        {
+            //TODO
+        }
+
+
+        /// <summary>
         /// Constructor.
         /// </summary>
         public Watcher(string folder)
@@ -198,24 +232,6 @@ namespace CmisSync.Lib
         private void OnError(object source, ErrorEventArgs e)
         {
             Debug.Assert(false);
-            //TODO
-        }
-
-        
-        public void RemoveChange(string name)
-        {
-            //TODO
-        }
-
-        
-        public void RemoveAll()
-        {
-            //TODO
-        }
-
-        
-        public void IgnoreChangeType(string name, ChangeTypes type)
-        {
             //TODO
         }
 

@@ -149,7 +149,34 @@ namespace TestLibrary
         [Test, Category("Fast")]
         public void TestRemove()
         {
-            Assert.Fail("TODO");
+            using (Watcher watcher = new Watcher(TestFolder))
+            {
+                watcher.EnableRaisingEvents = true;
+
+                List<string> names = new List<string>();
+                for (int i = 0; i < NormalNumber; ++i)
+                {
+                    CreateTestFile();
+                    names.Add(GetPathname());
+                }
+                WaitWatcher();
+                Assert.AreEqual(NormalNumber, watcher.GetChangeList().Count);
+                for (int i = 0; i < NormalNumber; ++i)
+                {
+                    Assert.AreEqual(NormalNumber - i, watcher.GetChangeList().Count);
+                    watcher.RemoveChange(names[i]);
+                }
+                names.Clear();
+
+                for (int i = 0; i < NormalNumber; ++i)
+                {
+                    CreateTestFile();
+                }
+                WaitWatcher();
+                Assert.AreEqual(NormalNumber, watcher.GetChangeList().Count);
+                watcher.RemoveAll();
+                Assert.AreEqual(0, watcher.GetChangeList().Count);
+            }
         }
 
         [Test, Category("Fast")]
