@@ -20,6 +20,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Collections.Generic;
 
+using log4net;
+
 
 namespace CmisSync.Lib
 {
@@ -28,6 +30,8 @@ namespace CmisSync.Lib
     /// </summary>
     public class Watcher : FileSystemWatcher
     {
+        // Log.
+        private static readonly ILog Logger = LogManager.GetLogger(typeof(Watcher));
 
         /// <summary>
         /// thread lock for <c>changeList</c> and <c>changes</c>
@@ -85,7 +89,7 @@ namespace CmisSync.Lib
 
 
         /// <summary>
-        /// <returns><c>ChangeTypes</c> for the file/folder <param>name</param></returns>
+        /// <returns><c>ChangeTypes</c> for <param name="name">the file/folder</param></returns>
         /// </summary>
         public ChangeTypes GetChangeType(string name)
         {
@@ -105,7 +109,7 @@ namespace CmisSync.Lib
 
 
         /// <summary>
-        /// remove the file/folder from changes
+        /// remove <param name="name">the file/folder</param> from changes
         /// </summary>
         public void RemoveChange(string name)
         {
@@ -114,6 +118,48 @@ namespace CmisSync.Lib
                 if (changes.Remove(name))
                 {
                     changeList.Remove(name);
+                }
+            }
+        }
+
+
+        /// <summary>
+        /// remove <param name="name">the file/folder</param> from changes for <param name="change"/>
+        /// </summary>
+        public void RemoveChange(string name, ChangeTypes change)
+        {
+            lock (changeLock)
+            {
+                ChangeTypes type;
+                if (changes.TryGetValue(name, out type))
+                {
+                    if (type == change)
+                    {
+                        changes.Remove(name);
+                        changeList.Remove(name);
+                    }
+                }
+            }
+        }
+
+
+        /// <summary>
+        /// insert <param name="name">the file/folder</param> for <param name="change"/> in changes
+        /// It should do nothing if <param name="name">the file/folder</param> exists in changes
+        /// </summary>
+        public void InsertChange(string name, ChangeTypes change)
+        {
+            if (ChangeTypes.None == change)
+            {
+                return;
+            }
+
+            lock (changeLock)
+            {
+                if (!changes.ContainsKey(name))
+                {
+                    changeList.Add(name);
+                    changes[name] = change;
                 }
             }
         }
@@ -129,12 +175,6 @@ namespace CmisSync.Lib
                 changes.Clear();
                 changeList.Clear();
             }
-        }
-
-
-        public void IgnoreChangeType(string name, ChangeTypes type)
-        {
-            //TODO
         }
 
 
@@ -231,8 +271,8 @@ namespace CmisSync.Lib
         
         private void OnError(object source, ErrorEventArgs e)
         {
-            Debug.Assert(false);
-            //TODO
+            Logger.Warn("Error occurred for FileSystemWatcher");
+            EnableRaisingEvents = false;
         }
 
         
