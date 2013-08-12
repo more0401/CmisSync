@@ -54,13 +54,13 @@ namespace TestLibrary
 
                 CreateTestFile(2);
                 string name = GetPathname();
-                WaitWatcher();
+                WaitWatcher(20000,watcher,1);
                 Assert.AreEqual(1, watcher.GetChangeList().Count);
                 Assert.AreEqual(name, watcher.GetChangeList()[0]);
 
                 CreateTestFile(3);
                 name = GetPathname();
-                WaitWatcher();
+                WaitWatcher(20000,watcher,2);
                 Assert.AreEqual(2, watcher.GetChangeList().Count);
                 Assert.AreEqual(name, watcher.GetChangeList()[1]);
 
@@ -74,7 +74,7 @@ namespace TestLibrary
 
                 CreateTestFile(5);
                 name = GetPathname();
-                WaitWatcher();
+                WaitWatcher(20000,watcher,3);
                 Assert.AreEqual(3, watcher.GetChangeList().Count);
                 Assert.AreEqual(name, watcher.GetChangeList()[2]);
             }
@@ -106,7 +106,6 @@ namespace TestLibrary
 
                 CreateTestFile(2);
                 WaitWatcher();
-                WaitWatcher();
                 Assert.AreEqual(0, count.Count);
 
                 watcher.EnableRaisingEvents = false;
@@ -119,29 +118,34 @@ namespace TestLibrary
                 watcher.EnableRaisingEvents = true;
 
                 CreateTestFile(4);
-                WaitWatcher();
-                WaitWatcher();
+                WaitWatcher(20000, count, (c) =>
+                {
+                    return c.Count >= 1;
+                });
                 Assert.LessOrEqual(1, count.Count);
                 int number = count.Count;
 
                 CreateTestFile(5);
-                WaitWatcher();
-                WaitWatcher();
+                WaitWatcher(20000, count, (c) =>
+                {
+                    return c.Count >= number + 1;
+                });
                 Assert.LessOrEqual(number + 1, count.Count);
                 number = count.Count;
 
                 watcher.EnableEvent = false;
 
                 CreateTestFile(6);
-                WaitWatcher();
                 Assert.AreEqual(number, count.Count);
                 number = count.Count;
 
                 watcher.EnableEvent = true;
 
                 CreateTestFile(7);
-                WaitWatcher();
-                WaitWatcher();
+                WaitWatcher(20000, count, (c) =>
+                {
+                    return c.Count >= number + 1;
+                });
                 Assert.LessOrEqual(number + 1, count.Count);
             }
         }
@@ -159,7 +163,7 @@ namespace TestLibrary
                     CreateTestFile();
                     names.Add(GetPathname());
                 }
-                WaitWatcher();
+                WaitWatcher(20000,watcher,NormalNumber);
                 Assert.AreEqual(NormalNumber, watcher.GetChangeList().Count);
                 for (int i = 0; i < NormalNumber; ++i)
                 {
@@ -179,7 +183,7 @@ namespace TestLibrary
                 {
                     CreateTestFile();
                 }
-                WaitWatcher();
+                WaitWatcher(20000,watcher,NormalNumber);
                 Assert.AreEqual(NormalNumber, watcher.GetChangeList().Count);
                 watcher.RemoveAll();
                 Assert.AreEqual(0, watcher.GetChangeList().Count);
@@ -251,7 +255,7 @@ namespace TestLibrary
                     CreateTestFile();
                     names.Add(GetPathname());
                 }
-                WaitWatcher();
+                WaitWatcher(20000,watcher,NormalNumber);
                 Assert.AreEqual(NormalNumber, watcher.GetChangeList().Count);
                 for (int i = 0; i < NormalNumber; ++i)
                 {
@@ -270,25 +274,31 @@ namespace TestLibrary
             {
                 watcher.EnableRaisingEvents = true;
 
+                List<string> names = new List<string>();
                 for (int i = 0; i < HeavyNumber; ++i)
                 {
                     CreateTestFile(0, i / FileInFolderNumber);
+                    names.Add(GetPathname(i / FileInFolderNumber));
                 }
-                WaitWatcher();
+                Assert.IsTrue(watcher.EnableRaisingEvents);
                 int totalNumber = HeavyNumber + (HeavyNumber - 1) / FileInFolderNumber;
+                WaitWatcher(30000,watcher,totalNumber);
                 Assert.AreEqual(totalNumber, watcher.GetChangeList().Count);
-                int fileNumber = 0;
-                for (int i = 0; i < watcher.GetChangeList().Count; ++i)
+                for (int i = 0; i < HeavyNumber; ++i)
                 {
-                    if (File.Exists(watcher.GetChangeList()[i]))
-                    {
-                        Assert.AreEqual(
-                            watcher.GetChangeType((string)watcher.GetChangeList()[i]),
-                            Watcher.ChangeTypes.Created);
-                        ++fileNumber;
-                    }
+#if __MonoCS__
+                    List<Watcher.ChangeTypes> types = new List<Watcher.ChangeTypes>();
+                    types.Add(Watcher.ChangeTypes.Created);
+                    types.Add(Watcher.ChangeTypes.Changed);
+                    Assert.Contains(
+                        watcher.GetChangeType(names[i]), types);
+#else
+                    Assert.AreEqual(
+                        watcher.GetChangeType(names[i]),
+                        Watcher.ChangeTypes.Created,
+                        names[i]);
+#endif
                 }
-                Assert.AreEqual(HeavyNumber, fileNumber);
             }
         }
 
@@ -308,16 +318,35 @@ namespace TestLibrary
                 for (int i = 0; i < NormalNumber; ++i)
                 {
                     CreateTestFile(names[i], i + 1);
-                    names.Add(GetPathname());
                 }
-                WaitWatcher();
-                Assert.AreEqual(NormalNumber, watcher.GetChangeList().Count);
+                WaitWatcher(20000,watcher,NormalNumber);
+                WaitWatcher(20000,watcher,(w)=>
+                {
+                    for (int i = 0; i < NormalNumber; ++i)
+                    {
+                        if (w.GetChangeType(names[i]) != Watcher.ChangeTypes.Changed)
+                        {
+                            return false;
+                        }
+                    }
+                    return true;
+                });
+                List<string> changeList = watcher.GetChangeList();
+                Assert.AreEqual(NormalNumber, changeList.Count);
                 for (int i = 0; i < NormalNumber; ++i)
                 {
-                    Assert.AreEqual(names[i], watcher.GetChangeList()[i]);
+                    Assert.Contains(names[i], changeList);
+#if __MonoCS__
+                    List<Watcher.ChangeTypes> types = new List<Watcher.ChangeTypes>();
+                    types.Add(Watcher.ChangeTypes.Created);
+                    types.Add(Watcher.ChangeTypes.Changed);
+                    Assert.Contains(
+                        watcher.GetChangeType(names[i]), types);
+#else
                     Assert.AreEqual(
-                        watcher.GetChangeType((string)watcher.GetChangeList()[i]),
+                        watcher.GetChangeType(names[i]),
                         Watcher.ChangeTypes.Changed);
+#endif
                 }
             }
         }
@@ -340,15 +369,24 @@ namespace TestLibrary
                 {
                     CreateTestFile();
                     names.Add(GetPathname());
-                    File.Delete(names[i]);
                 }
-                WaitWatcher();
-                Assert.AreEqual(NormalNumber, watcher.GetChangeList().Count);
+                WaitWatcher(20000,watcher,NormalNumber);
                 for (int i = 0; i < NormalNumber; ++i)
                 {
-                    Assert.AreEqual(names[i], watcher.GetChangeList()[i]);
+                    File.Delete(names[i]);
+                }
+                WaitWatcher(20000,watcher,(w) =>
+                {
+                    return w.GetChangeType(names[NormalNumber-1])
+                        == Watcher.ChangeTypes.Deleted;
+                });
+                List<string> changeList = watcher.GetChangeList();
+                Assert.AreEqual(NormalNumber, changeList.Count);
+                for (int i = 0; i < NormalNumber; ++i)
+                {
+                    Assert.Contains(names[i], changeList);
                     Assert.AreEqual(
-                        watcher.GetChangeType((string)watcher.GetChangeList()[i]),
+                        watcher.GetChangeType(names[i]),
                         Watcher.ChangeTypes.Deleted);
                 }
             }
@@ -380,13 +418,20 @@ namespace TestLibrary
 
             using (Watcher watcher = new Watcher(TestFolder))
             {
+                File.Delete(newname);
                 watcher.EnableRaisingEvents = true;
                 CreateTestFile(oldname, 1);
+                WaitWatcher(20000,watcher,1);
                 File.Move(oldname, newname);
-                WaitWatcher();
-                Assert.AreEqual(2, watcher.GetChangeList().Count);
-                Assert.AreEqual(oldname, watcher.GetChangeList()[0]);
-                Assert.AreEqual(newname, watcher.GetChangeList()[1]);
+                WaitWatcher(20000,watcher,2);
+                WaitWatcher(20000,watcher,(w)=>
+                {
+                    return w.GetChangeType(oldname) == Watcher.ChangeTypes.Deleted;
+                });
+                List<string> changeList = watcher.GetChangeList();
+                Assert.AreEqual(2, changeList.Count);
+                Assert.Contains(oldname, changeList);
+                Assert.Contains(newname, changeList);
                 Assert.AreEqual(Watcher.ChangeTypes.Deleted, watcher.GetChangeType(oldname));
                 Assert.AreEqual(Watcher.ChangeTypes.Created, watcher.GetChangeType(newname));
                 File.Delete(newname);
@@ -394,10 +439,12 @@ namespace TestLibrary
 
             using (Watcher watcher = new Watcher(TestFolder))
             {
+                File.Delete(newname);
                 watcher.EnableRaisingEvents = true;
                 CreateTestFile(oldnameOut, 1);
-                File.Move(oldnameOut, newname);
                 WaitWatcher();
+                File.Move(oldnameOut, newname);
+                WaitWatcher(20000,watcher,1);
                 Assert.AreEqual(1, watcher.GetChangeList().Count);
                 Assert.AreEqual(newname, watcher.GetChangeList()[0]);
                 Assert.AreEqual(Watcher.ChangeTypes.Created, watcher.GetChangeType(newname));
@@ -406,10 +453,15 @@ namespace TestLibrary
 
             using (Watcher watcher = new Watcher(TestFolder))
             {
+                File.Delete(newnameOut);
                 watcher.EnableRaisingEvents = true;
                 CreateTestFile(oldname, 1);
+                WaitWatcher(20000,watcher,1);
                 File.Move(oldname, newnameOut);
-                WaitWatcher();
+                WaitWatcher(20000,watcher,(w) => 
+                {
+                    return w.GetChangeType(oldname) == Watcher.ChangeTypes.Deleted;
+                });
                 Assert.AreEqual(1, watcher.GetChangeList().Count);
                 Assert.AreEqual(oldname, watcher.GetChangeList()[0]);
                 Assert.AreEqual(Watcher.ChangeTypes.Deleted, watcher.GetChangeType(oldname));
@@ -418,8 +470,10 @@ namespace TestLibrary
 
             using (Watcher watcher = new Watcher(TestFolder))
             {
+                File.Delete(newnameOut);
                 watcher.EnableRaisingEvents = true;
                 CreateTestFile(oldnameOut, 1);
+                WaitWatcher();
                 File.Move(oldnameOut, newnameOut);
                 WaitWatcher();
                 Assert.AreEqual(0, watcher.GetChangeList().Count);
@@ -501,9 +555,52 @@ namespace TestLibrary
             }
         }
 
-        private void WaitWatcher()
+        private void WaitWatcher(int milliseconds = 10)
         {
-            Thread.Sleep(10);
+            Thread.Sleep(milliseconds);
         }
+
+        private void WaitWatcher(int milliseconds,Watcher watcher,int expect)
+        {
+            while (milliseconds >= 0)
+            {
+                if (watcher.GetChangeList().Count >= expect)
+                {
+                    return;
+                }
+                Thread.Sleep(10);
+                milliseconds = milliseconds - 10;
+            }
+            Console.WriteLine("Timeout");
+        }
+
+        private void WaitWatcher(int milliseconds,Watcher watcher,Func<Watcher,bool> checkStop)
+        {
+            while (milliseconds >= 0)
+            {
+                if (checkStop(watcher))
+                {
+                    return;
+                }
+                Thread.Sleep(10);
+                milliseconds = milliseconds - 10;
+            }
+            Console.WriteLine("Timeout");
+        }
+
+        private void WaitWatcher(int milliseconds,FileSystemEventCount count,Func<FileSystemEventCount,bool> checkStop)
+        {
+            while (milliseconds >= 0)
+            {
+                if (checkStop(count))
+                {
+                    return;
+                }
+                Thread.Sleep(10);
+                milliseconds = milliseconds - 10;
+            }
+            Console.WriteLine("Timeout");
+        }
+
     }
 }
