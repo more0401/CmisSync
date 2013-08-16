@@ -254,7 +254,6 @@ namespace CmisSync.Lib.Cmis
                 Logger.Warn("IOException while calculating checksum of " + path
                     + " , The file was removed while reading. Just skip it, as it does not need to be added anymore. "
                     + Utils.ToLogString(e));
-                return;
             }
 
             if (String.IsNullOrEmpty(checksum))
